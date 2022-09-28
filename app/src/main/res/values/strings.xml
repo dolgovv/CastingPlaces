@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Casting Places</string>
+    <string name="title_activity_card_info">CardInfo</string>
+</resources>
