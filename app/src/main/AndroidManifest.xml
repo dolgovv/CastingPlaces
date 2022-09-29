@@ -14,6 +14,24 @@
         android:theme="@style/Theme.CastingPlaces"
         tools:targetApi="31">
         <activity
+            android:name=".CardDetailsScreen"
+            android:exported="false"
+            android:label="@string/title_activity_card_details_screen"
+            android:theme="@style/Theme.CastingPlaces">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
+        <activity
+            android:name=".MainScreen"
+            android:exported="false"
+            android:label="@string/title_activity_main_screen"
+            android:theme="@style/Theme.CastingPlaces">
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="" />
+        </activity>
+        <activity
             android:name=".CardInfo"
             android:exported="false"
             android:label="@string/title_activity_card_info"
