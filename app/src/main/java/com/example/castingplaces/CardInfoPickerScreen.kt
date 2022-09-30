@@ -2,6 +2,8 @@ package com.example.castingplaces
 
 import android.app.DatePickerDialog
 import android.content.Context
+import android.widget.DatePicker
+import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,16 +29,48 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
 import java.text.SimpleDateFormat
+import java.time.Year
 import java.util.*
 
-private var cal = Calendar.getInstance()
-private lateinit var dateSetListener: DatePickerDialog.OnDateSetListener
+
+
+@Composable
+private fun DatePickerButton(){
+
+    val context = LocalContext.current
+
+    var calendar = Calendar.getInstance()
+    val currentYear = calendar.get(Calendar.YEAR)
+    val currentMonth = calendar.get(Calendar.MONTH)
+    val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
+
+    var pickedDate = mutableStateOf("PICK YOUR DATE")
+    var buttonText by pickedDate
+
+    val dpd = DatePickerDialog(context, DatePickerDialog.OnDateSetListener {
+            view, slctdyear, slctdmonth, slctddayOfMonth ->
+
+        buttonText = "$slctddayOfMonth/${slctdmonth+1}/$slctdyear"
+
+    }, currentYear, currentMonth, currentDay)
+    
+    OutlinedButton(modifier = Modifier
+        .fillMaxWidth()
+        .height(50.dp)
+        .border(BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface)),
+
+        onClick = {
+            dpd.show()
+        }) {
+
+        Text(text ="$buttonText")
+    }
+}
 
 @Composable
 fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
 
     val mainContext = LocalContext.current
-
 
     var text: String by remember {
         mutableStateOf("")
@@ -92,7 +126,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                     singleLine = false,
                     label = { Text(text = "Description") })
 
-                DateButton("PICK A DATE")
+                DatePickerButton()
 
                 OutlinedButton(
                     modifier = Modifier
@@ -162,41 +196,56 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
     }
 }
 
-@Composable
-fun DateButton(title: String) {
-    val mainContext = LocalContext.current
-    val dateFormat = "dd.MM.yyyy"
-    val sdf = SimpleDateFormat(dateFormat, Locale.getDefault())
-    dateSetListener = DatePickerDialog.OnDateSetListener { view, year, month, dayOfMonth ->
-        cal.set(Calendar.YEAR, year)
-        cal.set(Calendar.MONTH, month)
-        cal.set(Calendar.DAY_OF_MONTH, dayOfMonth)
-    }
-    var tiitle = mutableStateOf(sdf.format(cal.time).toString())
-        //sdf.format(cal.time).toString()
-    val myText by tiitle
-
-
-    OutlinedButton(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp)
-            .border(BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface)),
-        onClick = {
-
-
-            DatePickerDialog(
-                mainContext, dateSetListener,
-                cal.get(Calendar.YEAR),
-                cal.get(Calendar.MONTH),
-                cal.get(Calendar.DAY_OF_MONTH)
-            ).show()
-
-        }
-    ) {
-        Text(text = cal.get(Calendar.DAY_OF_MONTH).toString() )
-    }
-}
+//@Composable
+//fun DateButton(title: String) {
+//
+//    val mainContext = LocalContext.current
+//
+//    val year = calendar.get(Calendar.YEAR)
+//    val month = calendar.get(Calendar.MONTH)
+//    val day = calendar.get(Calendar.DAY_OF_MONTH)
+//
+//    val dateFormat = "dd.MM.yyyy"
+//
+//    var selectedDate: String = ""
+//
+//    val sdf = SimpleDateFormat(dateFormat, Locale.getDefault())
+//    val dateSetListener = DatePickerDialog(mainContext, DatePickerDialog.OnDateSetListener {
+//            view, slctdyear, slctdmonth, slctddayOfMonth ->
+//
+//        selectedDate = "$slctddayOfMonth/${slctdmonth+1}/$slctdyear"
+//
+//        val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.ENGLISH)
+//
+//
+//
+//    },
+//        year,
+//        month,
+//        day)
+//    var tiitle = mutableStateOf(selectedDate)
+//        //sdf.format(cal.time).toString()
+//
+//
+//    OutlinedButton(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .height(50.dp)
+//            .border(BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface)),
+//        onClick = {
+//
+//            DatePickerDialog(
+//                mainContext, dateSetListener,
+//                calendar.get(Calendar.YEAR),
+//                calendar.get(Calendar.MONTH),
+//                calendar.get(Calendar.DAY_OF_MONTH)
+//            ).show()
+//
+//        }
+//    ) {
+//        Text(text = tiitle.toString() )
+//    }
+//}
 
 @Composable
 fun OutTextField(textIn: String) {
@@ -222,6 +271,8 @@ fun OutTextField(textIn: String) {
 //        CardInfoPickerScreen(navController = rememberNavController(), "Card Info Picker")
 //    }
 //}
+
+
 
 @Preview(showBackground = true)
 @Composable
