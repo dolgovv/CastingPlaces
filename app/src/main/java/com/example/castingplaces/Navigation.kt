@@ -19,10 +19,10 @@ fun Navigation(navController: NavHostController) {
         }
 
         composable(route = Screens.CardDetailsScreen.route) {
-            CardDetailsScreen(navController = navController, "zdes")
+            CardDetailsScreen(navController = navController, "fromNavigation")
         }
         composable(route = Screens.CardInfoPickerScreen.route) {
-            CardInfoPickerScreen(navController, "Tested")
+            CardInfoPickerScreen(navController, "fromNavigation")
         }
     }
 }
