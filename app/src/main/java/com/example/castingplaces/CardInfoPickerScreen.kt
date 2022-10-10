@@ -1,9 +1,12 @@
 package com.example.castingplaces
 
 import android.app.DatePickerDialog
+import android.content.Context
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.ImageDecoder
+import android.icu.text.CaseMap.Title
 import android.net.Uri
 import android.util.Log
 import android.widget.Button
@@ -32,6 +35,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.graphics.scale
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
@@ -39,6 +43,27 @@ import com.example.castingplaces.ui.theme.CastingPlacesTheme
 import java.io.File
 import java.io.InputStream
 import java.util.*
+
+class ImageFileProvider2 : FileProvider() {
+    companion object {
+        fun getImageUri(context: Context): Uri {
+            val directory = File(context.cacheDir, "images")
+            directory.mkdirs()
+            val file = File.createTempFile(
+                "selected_image_",
+                ".jpg",
+                directory,
+            )
+            val authority = context.packageName + ".fileprovider"
+            return getUriForFile(
+                context,
+                authority,
+                file,
+            )
+        }
+    }
+}
+
 
 @Composable
 fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
@@ -59,17 +84,20 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
         imageUri = uri
     }
 
+    /** CAMERA FUNC VALUES */
+    var hasImage by remember {
+        mutableStateOf(false)
+    }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ) { cameraLauncherResult ->
+        hasImage = cameraLauncherResult
+    }
+
     /** OTHER VALUES */
 
     val dialogShowVal = remember { mutableStateOf(false) }
-
-    var cardTitle: String by remember {
-        mutableStateOf("")
-    }
-    var cardDescription: String by remember {
-        mutableStateOf("")
-    }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colors.background
@@ -82,7 +110,9 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
 
         ) {
             TopAppBar(
-                title = { Text(text = cardTitle) },
+                title = {
+                    Text(text = "New place")
+                },
                 navigationIcon = {
                     IconButton(onClick = {
                         navController.popBackStack()
@@ -92,6 +122,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                     }
                 }
             )
+
 
             Column( //column for textFields
                 modifier = Modifier
@@ -104,65 +135,19 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
             ) {
                 if (dialogShowVal.value) {
 
-                    AlertDialog(
-                        onDismissRequest = {
-                            dialogShowVal.value = false
-                        },
-                        title = {
-                            Text(text = "Choose source")
-                        },
-                        buttons = {
-
-                            Row(
-                                modifier = Modifier.padding(all = 8.dp),
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-
-                                ButtonTEST("Gallery",
-                                    onClickTest = {
-                                        storageLauncher.launch("image/*")
-                                    },
-                                    dialogShow = { dialogShowVal.value = false }
-
-                                )
-                                ButtonTEST("Camera",
-                                    onClickTest = {
-                                        Toast.makeText(
-                                            context,
-                                            "camera clicked",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    },
-                                    dialogShow = { dialogShowVal.value = false }
-                                )
-                            }
-                        }
+                    SourceDialog(
+                        closeDialog = { dialogShowVal.value = false },
+                        runStorageLauncher = { storageLauncher.launch("image/*") },
+                        runCameraLauncher = {
+                            val uri = ImageFileProvider.getImageUri(context)
+                            imageUri = uri
+                            cameraLauncher.launch(uri)},
+                        context = context
                     )
                 }
 
-                OutlinedTextField(
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    value = cardTitle,
-                    onValueChange = {
-                        cardTitle = if (it.length <= 20) {
-                            it
-                        } else cardTitle
-                    },
-                    singleLine = true,
-                    label = {
-                        Text(text = "Title")
-                    }
-                )
-
-                OutlinedTextField(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(100.dp),
-                    value = cardDescription,
-                    onValueChange = { cardDescription = it },
-                    singleLine = false,
-                    label = { Text(text = "Description") })
+                TextFields(isLong = false, title = "Title")
+                TextFields(isLong = true, title = "Description")
 
                 DatePickerButton()
 
@@ -200,7 +185,6 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                             .width(200.dp)
                     ) {
                         imageUri?.let {
-
                             val source = ImageDecoder
                                 .createSource(context.contentResolver, it)
                             bitmap.value = ImageDecoder.decodeBitmap(source)
@@ -208,24 +192,10 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
 
                         if (bitmap.value != null) {
                             bitmap.value?.let { btm ->
-                                PickedImageTest(bitmap = btm)
+                                PickedImage(bitmap = btm)
                             }
-
                         } else {
-
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_launcher_background),
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .border(
-                                        border = BorderStroke(
-                                            Dp.Hairline,
-                                            MaterialTheme.colors.onSurface
-                                        )
-                                    )
-                            )
+                            DefaultImage()
                         }
                     }
 
@@ -237,9 +207,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                         verticalArrangement = Arrangement.Center
 
                     ) {
-                        ButtonTEST("ADD IMAGE",
-                            onClickTest = {
-                            },
+                        ButtonAddImage(
                             dialogShow = { dialogShowVal.value = true }
                         )
                     }
@@ -249,75 +217,20 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
     }
 }
 
-@Composable
-fun PickedImageTest(bitmap: Bitmap) {
-    Image(
-        bitmap = bitmap.asImageBitmap(),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .fillMaxSize()
-            .clip(RoundedCornerShape(10.dp))
-            .border(
-                border = BorderStroke(
-                    Dp.Hairline,
-                    MaterialTheme.colors.onSurface
-                )
-            ),
-    )
-}
+
+/** BUTTONS */
 
 @Composable
-fun ButtonTEST(
-    title: String,
-    onClickTest: () -> Unit,
+fun ButtonAddImage(
     dialogShow: () -> Unit
 ) {
-
-    val context = LocalContext.current
-
-    /** VALUES FOR PERMISSION REQUESTING */
-
-    val launcher = rememberLauncherForActivityResult(
-        /** ЭТО ДИАЛОГ И ЕГО ФУНКЦИОНАЛ */
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        /** ЛОГИКА ПОЛУЧИЛ ИЛИ НЕТ РАЗРЕШЕНИЯ */
-        if (isGranted) {
-            /** закрыть  */
-            // Permission Accepted: Do something
-            Log.d("ExampleScreen", "PERMISSION GRANTED")
-
-        } else {
-            // Permission Denied: Do something
-            Log.d("ExampleScreen", "PERMISSION DENIED")
-        }
-    }
-
-    TextButton(modifier = Modifier.padding(10.dp),
-        onClick = {
-            /** ПОКАЗАТЬ ДИАЛОГ ЕСЛИ ПЕРМИШН НЕ ДАН */
-            when (PackageManager.PERMISSION_GRANTED) {
-                ContextCompat.checkSelfPermission(
-                    context,
-                    android.Manifest.permission.READ_EXTERNAL_STORAGE
-                ) -> {
-                    /**  Some works that require permission */
-                    onClickTest()
-                    dialogShow()
-                    Log.d("ExampleScreen", "Code requires permission")
-                }
-
-                else -> {
-                    // Asking for permission
-                    launcher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                }
-            }
-        }) {
-
+    TextButton(
+        modifier = Modifier
+            .fillMaxSize(),
+        onClick = { dialogShow() }) {
         Text(
-            text = title,
-            fontSize = 20.sp
+            text = "ADD IMAGE",
+            fontSize = 16.sp
         )
     }
 }
@@ -360,9 +273,195 @@ fun DatePickerButton() {
     }
 }
 
+@Composable
+fun ButtonImageSourcePicker(
+    title: String,
+    onClickTest: () -> Unit,
+    dialogShow: () -> Unit
+) {
+
+    val context = LocalContext.current
+
+    /** VALUES FOR PERMISSION REQUESTING */
+
+    val permLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            dialogShow()
+            onClickTest()
+            Log.d("ExampleScreen", "PERMISSION GRANTED")
+        } else {
+            Log.d("ExampleScreen", "PERMISSION DENIED")
+        }
+    }
+
+    TextButton(modifier = Modifier.padding(10.dp),
+        onClick = {
+            if (title == "Camera") {
+                if (ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.CAMERA
+                    ) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    onClickTest()
+                    dialogShow()
+                } else {
+                    permLauncher.launch(android.Manifest.permission.CAMERA)
+                    permLauncher.launch(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                }
+
+            } else if (title == "Gallery") {
+                if (ContextCompat.checkSelfPermission(
+                        context,
+                        android.Manifest.permission.READ_EXTERNAL_STORAGE
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    onClickTest()
+                    dialogShow()
+                } else {
+                    permLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                }
+            }
+        }) {
+        Text(
+            text = title,
+            fontSize = 20.sp
+        )
+    }
+}
+
+/** OTHER SURFACES */
+
+@Composable
+fun TextFields(isLong: Boolean, title: String) {
+
+    var cardTitle: String by remember {
+        mutableStateOf("")
+    }
+    var cardDescription: String by remember {
+        mutableStateOf("")
+    }
+    if (isLong) {
+
+        OutlinedTextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(100.dp),
+            value = cardDescription,
+            onValueChange = { cardDescription = it },
+            singleLine = false,
+            label = { Text(text = title) })
+    } else {
+        OutlinedTextField(
+            modifier = Modifier
+                .fillMaxWidth(),
+            value = cardTitle,
+            onValueChange = {
+                cardTitle = if (it.length <= 20) {
+                    it
+                } else cardTitle
+            },
+            singleLine = true,
+            label = {
+                Text(text = title)
+            }
+        )
+    }
+}
+
+@Composable
+fun SourceDialog(
+    closeDialog: () -> Unit,
+    runStorageLauncher: () -> Unit,
+    runCameraLauncher: () -> Unit,
+    context: Context
+) {
+    AlertDialog( modifier = Modifier
+        .clip(RoundedCornerShape(10.dp)),
+        onDismissRequest = {
+            closeDialog()
+        },
+        title = {
+            Text(text = "Choose source")
+        },
+        buttons = {
+
+            Row(
+                modifier = Modifier.padding(all = 8.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+
+                ButtonImageSourcePicker("Gallery",
+                    onClickTest = {
+                        runStorageLauncher()
+                    },
+                    dialogShow = { closeDialog() }
+
+                )
+                ButtonImageSourcePicker("Camera",
+                    onClickTest = {
+                        Toast.makeText(
+                            context,
+                            "camera clicked",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        val cameraUri = ImageFileProvider2.getImageUri(context)
+
+                        runCameraLauncher()
+
+                        //imageUri = cameraUri
+
+                    },
+                    dialogShow = { closeDialog() }
+                )
+            }
+        }
+    )
+}
+
+@Composable
+fun PickedImage(bitmap: Bitmap) {
+    Image(
+        bitmap = bitmap.asImageBitmap(),
+        contentDescription = null,
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(10.dp))
+            .border(
+                border = BorderStroke(
+                    Dp.Hairline,
+                    MaterialTheme.colors.onSurface
+                )
+            ),
+    )
+}
+
+@Composable
+fun DefaultImage() {
+    Image(
+        painter = painterResource(id = R.drawable.ic_launcher_background),
+        contentDescription = "default image",
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(10.dp))
+            .border(
+                border = BorderStroke(
+                    Dp.Hairline,
+                    MaterialTheme.colors.onSurface
+                )
+            )
+    )
+}
 
 /** ======= PREVIEWS ======= */
 
+//@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 //@Preview(showBackground = true)
 //@Composable
 //fun DefaultPreview3() {
@@ -371,11 +470,16 @@ fun DatePickerButton() {
 //    }
 //}
 
-
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Preview(showBackground = true)
 @Composable
 fun FieldPreview() {
     CastingPlacesTheme {
-        CardInfoPickerScreen(rememberNavController(), "TEST")
+        SourceDialog(
+            closeDialog = { /*TODO*/ },
+            runStorageLauncher = { /*TODO*/ },
+            runCameraLauncher = { /*TODO*/ },
+            context = LocalContext.current
+        )
     }
 }
