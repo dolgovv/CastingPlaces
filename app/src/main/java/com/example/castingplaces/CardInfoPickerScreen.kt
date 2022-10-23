@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
 import java.io.File
 import java.util.*
@@ -400,22 +401,22 @@ fun DefaultImage() {
 
 /** ======= PREVIEWS ======= */
 
-//@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-//@Preview(showBackground = true)
-//@Composable
-//fun DefaultPreview3() {
-//    CastingPlacesTheme {
-//        CardInfoPickerScreen(navController = rememberNavController(), "Card Info Picker")
-//    }
-//}
-
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Preview(showBackground = true)
 @Composable
-fun FieldPreview() {
+fun FullPreview() {
     CastingPlacesTheme {
-        SourceDialog(
-            closeDialog = { /*TODO*/ },
-            runStorageLauncher = { /*TODO*/ },
-            runCameraLauncher = { /*TODO*/ }
-        ) } }
+        CardInfoPickerScreen(navController = rememberNavController(), "Card Info Picker")
+    }
+}
+
+//@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+//@Preview(showBackground = true)
+//@Composable
+//fun FieldPreview() {
+//    CastingPlacesTheme {
+//        SourceDialog(
+//            closeDialog = { /*TODO*/ },
+//            runStorageLauncher = { /*TODO*/ },
+//            runCameraLauncher = { /*TODO*/ }
+//        ) } }
