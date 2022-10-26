@@ -34,7 +34,6 @@ import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
-import com.karumi.dexter.Dexter
 import java.util.jar.Manifest
 
 
@@ -85,9 +84,6 @@ fun MainCard(title: String, subtitle: String, navController: NavController) {
             .padding(top = 10.dp)
             .clickable {
                 navController.navigate(route = Screens.CardDetailsScreen.route)
-//                context.startActivity(intent)
-                //navController.navigate(route = Screens.CardDetailsScreen.route)
-
             },
         shape = MaterialTheme.shapes.medium,
         elevation = 5.dp,

@@ -11,7 +11,7 @@ import androidx.navigation.compose.rememberNavController
 fun Navigation(navController: NavHostController) {
     NavHost(
         navController = navController,
-        startDestination = Screens.CardInfoPickerScreen.route
+        startDestination = Screens.MainScreen.route
 
     ) {
         composable(route = Screens.MainScreen.route) {

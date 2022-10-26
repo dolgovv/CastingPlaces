@@ -1,11 +1,13 @@
 package com.example.castingplaces
 
+import android.R.id
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
+
 
 class SQLiteHelper(context: Context, factory: SQLiteDatabase.CursorFactory?) :
 SQLiteOpenHelper(context, DATABASE_NAME, factory, DATABASE_VERSION)
@@ -53,16 +55,69 @@ SQLiteOpenHelper(context, DATABASE_NAME, factory, DATABASE_VERSION)
         db.close()
     }
 
-    fun getCard(cardId: Int){
+    /** NEED TO BE TESTED ?whereArgs? */
+    fun updateCard(card: Card): Int {
+        val db = this.writableDatabase
+        val whereArgs = arrayOf<String>(java.lang.String.valueOf(card.getId()))
+
+        val values = ContentValues()
+        values.put(COLUMN_CARD_NAME, card.getName())
+        values.put(COLUMN_CARD_DESCRIPTION, card.getDescription())
+        values.put(COLUMN_CARD_DATE, card.getDate())
+        values.put(COLUMN_CARD_LOCATION, card.getLocation())
+        values.put(COLUMN_CARD_IMAGE, card.getImage())
+
+        return db.update(TABLE_CARDS, values, COLUMN_ID + " =?", whereArgs)
+    }
+
+    fun deleteCard(card: Card){
+        val db = this.writableDatabase
+        val whereArgs = arrayOf<String>(java.lang.String.valueOf(card.getId()))
+
+        db.delete(TABLE_CARDS, COLUMN_ID + " =?", whereArgs)
+        db.close()
+    }
+    /** === === NOT TO USE === === */
+
+    fun getCard(cardId: Int): Card {
         val db: SQLiteDatabase = this.readableDatabase
         val selectQuery = "SELECT * FROM " + TABLE_CARDS + " WHERE " + COLUMN_ID + " = " + cardId
         Log.d("SOURCE IS: ", "$selectQuery")
 
-        val cursor: Cursor = db.rawQuery(selectQuery, null)
-        cursor.moveToFirst()
+        val curs: Cursor = db.rawQuery(selectQuery, null)
+        curs.moveToFirst()
 
-        /** SHOULD IMPLEMENT NEW CLASS OBJECT, PUT NEW INFO INTO IT AND THEN RETURN IT */
+        val newCard: Card = Card(
+            curs.getInt(curs.getColumnIndex(COLUMN_ID)), // ID
+            curs.getString(curs.getColumnIndex(COLUMN_CARD_NAME)), // NAME
+            curs.getString(curs.getColumnIndex(COLUMN_CARD_DESCRIPTION)), // DESCRIPTION
+            curs.getString(curs.getColumnIndex(COLUMN_CARD_DATE)), // DATE
+            curs.getString(curs.getColumnIndex(COLUMN_CARD_LOCATION)), // LOCATION
+            curs.getBlob(curs.getColumnIndex(COLUMN_CARD_IMAGE)) // IMAGE (ByteArray)
+            )
 
+        return newCard
     }
 
+    fun getAllCards(){
+
+        val newCardsList: MutableList<Card> = ArrayList<Card>()
+        val selectQuery = "SELECT * FROM " + TABLE_CARDS
+        val db = this.writableDatabase
+        val curs: Cursor = db.rawQuery(selectQuery, null)
+
+        if (curs.moveToFirst()){
+            do {
+                val newCard: Card = Card(
+                    curs.getInt(curs.getColumnIndex(COLUMN_ID)), // ID
+                    curs.getString(curs.getColumnIndex(COLUMN_CARD_NAME)), // NAME
+                    curs.getString(curs.getColumnIndex(COLUMN_CARD_DESCRIPTION)), // DESCRIPTION
+                    curs.getString(curs.getColumnIndex(COLUMN_CARD_DATE)), // DATE
+                    curs.getString(curs.getColumnIndex(COLUMN_CARD_LOCATION)), // LOCATION
+                    curs.getBlob(curs.getColumnIndex(COLUMN_CARD_IMAGE)) // IMAGE (ByteArray)
+                )
+                newCardsList.add(newCard)
+            } while (curs.moveToNext())
+        }
+    }
 }

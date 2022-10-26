@@ -23,7 +23,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,19 +43,24 @@ import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.*
 
+var mCardName = ""
+var mCardDescription = ""
+var mCardDate = ""
+var mCardLocation = ""
+var mCardBitmap: Bitmap? = null
+
 @Composable
 fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
-
     val context = LocalContext.current
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
-
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
-
     var hasImage by remember { mutableStateOf(false) }
+    val dialogShowVal = remember { mutableStateOf(false) }
 
     val storageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -68,9 +75,12 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
         })
 
     val directory = File(context.filesDir, "images")
-    if (!directory.exists()) { directory.mkdirs() }
+    /** IMPORTANT TO ADD IT BEFORE RELEASE */
+    //if (!directory.exists()) { directory.mkdirs() }
 
-    val dialogShowVal = remember { mutableStateOf(false) }
+    val stream = ByteArrayOutputStream()
+   // mCardBitmap?.compress(Bitmap.CompressFormat.JPEG, 0, stream)
+    val cardImage = stream.toByteArray()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -96,6 +106,8 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = null)
                     } } )
 
+
+
             Column(
                 modifier = Modifier
                     .fillMaxHeight(0.4f)
@@ -113,7 +125,10 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                             val source = ImageDecoder
                                 .createSource(context.contentResolver, it)
                             bitmap.value = ImageDecoder.decodeBitmap(source)
+                         mCardBitmap = bitmap.value
                             hasImage = false
+                            Log.d("DATA RECEIVE FROM COMPOSABLES: ",
+                                "mCardBitmap is $mCardBitmap")
                         } } }
 
                 if (dialogShowVal.value) {
@@ -175,10 +190,11 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                     ) {
 
                         if (bitmap.value != null) {
-
                             bitmap.value?.let { btm ->
+                                PickedImage(bitmap = btm)
+                              //  mCardBitmap = btm
 
-                                PickedImage(bitmap = btm) }
+                            }
                         } else {
                             DefaultImage()
                         } }
@@ -194,7 +210,23 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                         ButtonAddImage(
                             dialogShow = {
                                 dialogShowVal.value = true
-                            } ) } } } } } }
+                            } ) } }
+                Column(modifier = Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp),
+                    verticalArrangement = Arrangement.Bottom,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    ButtonNewCard {
+                        saveTheCard()
+                    }
+                } } } } }
+
+fun saveTheCard(){
+
+
+}
 
 
 /** BUTTONS */
@@ -222,7 +254,9 @@ fun DatePickerButton() {
     val currentMonth = calendar.get(Calendar.MONTH)
     val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
 
-    val pickedDate = mutableStateOf("PICK YOUR DATE")
+    val pickedDate = remember {
+        mutableStateOf("PICK YOUR DATE")
+    }
     var buttonText by pickedDate
 
     val dpd = DatePickerDialog(
@@ -230,7 +264,9 @@ fun DatePickerButton() {
         DatePickerDialog.OnDateSetListener { _, slctdyear, slctdmonth, slctddayOfMonth ->
 
             buttonText = "$slctddayOfMonth/${slctdmonth + 1}/$slctdyear"
-
+            mCardDate = buttonText
+            Log.d("DATA RECEIVE FROM COMPOSABLES: ",
+                "mCardDate is $mCardDate")
         },
         currentYear,
         currentMonth,
@@ -320,7 +356,10 @@ fun TextFields(isLong: Boolean, title: String) {
                 .fillMaxWidth()
                 .height(100.dp),
             value = cardDescription,
-            onValueChange = { cardDescription = it },
+            onValueChange = { cardDescription = it
+                mCardDescription = cardDescription
+                Log.d("DATA RECEIVE FROM COMPOSABLES: ",
+                    "mCardDescription is $mCardDescription")},
             singleLine = false,
             label = { Text(text = title) } )
 
@@ -330,9 +369,12 @@ fun TextFields(isLong: Boolean, title: String) {
                 .fillMaxWidth(),
             value = cardTitle,
             onValueChange = {
-                cardTitle = if (it.length <= 20) {
-                    it
-                } else cardTitle
+                if (it.length <= 20){
+                    cardTitle = it
+                    mCardName = cardTitle
+                    Log.d("DATA RECEIVE FROM COMPOSABLES: ",
+                        "mCardName is $mCardName")
+                } else cardTitle = cardTitle
             },
             singleLine = true,
             label = {
@@ -397,16 +439,37 @@ fun DefaultImage() {
                 border = BorderStroke(
                     Dp.Hairline,
                     MaterialTheme.colors.onSurface
-                ) ) ) }
+                )
+            ) ) }
+
+@Composable
+fun ButtonNewCard(saveCard: () -> Unit) {
+    val mainContext = LocalContext.current
+    FloatingActionButton(
+        onClick = {
+
+        },
+        backgroundColor = MaterialTheme.colors.surface,
+    ) {
+        Icon(
+            Icons.Filled.Done, contentDescription = null,
+            modifier = Modifier
+                .size(50.dp),
+            contentColorFor(backgroundColor = MaterialTheme.colors.surface)
+        )
+    }
+}
+
+
 
 /** ======= PREVIEWS ======= */
 
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Preview(showBackground = true)
+//@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview//(showBackground = true)
 @Composable
 fun FullPreview() {
     CastingPlacesTheme {
-        CardInfoPickerScreen(navController = rememberNavController(), "Card Info Picker")
+        CardInfoPickerScreen(navController = rememberNavController(), cardTitle ="you" )
     }
 }
 
