@@ -9,29 +9,31 @@ import android.database.sqlite.SQLiteOpenHelper
 import android.util.Log
 
 
-class SQLiteHelper(context: Context, factory: SQLiteDatabase.CursorFactory?) :
-SQLiteOpenHelper(context, DATABASE_NAME, factory, DATABASE_VERSION)
+class SQLiteHelper(context: Context) :
+SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION)
 {
     companion object {
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 3
         private const val DATABASE_NAME = "CastingPlaces.db"
         private const val TABLE_CARDS = "cards"
+
         private const val COLUMN_ID = "_id"
-        private const val COLUMN_CARD_NAME = "card_name"
-        private const val COLUMN_CARD_DESCRIPTION = "card_description"
-        private const val COLUMN_CARD_DATE = "card_date"
-        private const val COLUMN_CARD_LOCATION = "card_location"
-        private const val COLUMN_CARD_IMAGE = "card_image"
+        private const val COLUMN_CARD_NAME = "name"
+        private const val COLUMN_CARD_DESCRIPTION = "description"
+        private const val COLUMN_CARD_DATE = "date"
+        private const val COLUMN_CARD_LOCATION = "location"
+        private const val COLUMN_CARD_IMAGE = "image"
 
     }
+
 
     override fun onCreate(db: SQLiteDatabase?) {
         val CREATE_CARDS_TABLE = ("CREATE TABLE " + TABLE_CARDS + "("
                 + COLUMN_ID + " INTEGER PRIMARY KEY,"
-                + COLUMN_CARD_NAME + " TEXT"
-                + COLUMN_CARD_DESCRIPTION + " TEXT"
-                + COLUMN_CARD_DATE + " TEXT"
-                + COLUMN_CARD_LOCATION + " TEXT"
+                + COLUMN_CARD_NAME + " TEXT,"
+                + COLUMN_CARD_DESCRIPTION + " TEXT,"
+                + COLUMN_CARD_DATE + " TEXT,"
+                + COLUMN_CARD_LOCATION + " TEXT,"
                 + COLUMN_CARD_IMAGE + " TEXT)")
         db?.execSQL(CREATE_CARDS_TABLE)
     }
@@ -41,7 +43,7 @@ SQLiteOpenHelper(context, DATABASE_NAME, factory, DATABASE_VERSION)
         onCreate(db)
     }
 
-    fun addCard (card: Card){
+    fun addCard (card: Card): Long {
         val db: SQLiteDatabase = this.writableDatabase
 
         val values = ContentValues()
@@ -51,8 +53,9 @@ SQLiteOpenHelper(context, DATABASE_NAME, factory, DATABASE_VERSION)
         values.put(COLUMN_CARD_LOCATION, card.getLocation())
         values.put(COLUMN_CARD_IMAGE, card.getImage())
 
-        db.insert(TABLE_CARDS, null, values)
+        val result = db.insert(TABLE_CARDS, null, values)
         db.close()
+        return result
     }
 
     /** NEED TO BE TESTED ?whereArgs? */
@@ -93,13 +96,13 @@ SQLiteOpenHelper(context, DATABASE_NAME, factory, DATABASE_VERSION)
             curs.getString(curs.getColumnIndex(COLUMN_CARD_DESCRIPTION)), // DESCRIPTION
             curs.getString(curs.getColumnIndex(COLUMN_CARD_DATE)), // DATE
             curs.getString(curs.getColumnIndex(COLUMN_CARD_LOCATION)), // LOCATION
-            curs.getBlob(curs.getColumnIndex(COLUMN_CARD_IMAGE)) // IMAGE (ByteArray)
+            curs.getString(curs.getColumnIndex(COLUMN_CARD_IMAGE)) // IMAGE (ByteArray)
             )
 
         return newCard
     }
 
-    fun getAllCards(){
+    fun getAllCards(): MutableList<Card> {
 
         val newCardsList: MutableList<Card> = ArrayList<Card>()
         val selectQuery = "SELECT * FROM " + TABLE_CARDS
@@ -114,10 +117,11 @@ SQLiteOpenHelper(context, DATABASE_NAME, factory, DATABASE_VERSION)
                     curs.getString(curs.getColumnIndex(COLUMN_CARD_DESCRIPTION)), // DESCRIPTION
                     curs.getString(curs.getColumnIndex(COLUMN_CARD_DATE)), // DATE
                     curs.getString(curs.getColumnIndex(COLUMN_CARD_LOCATION)), // LOCATION
-                    curs.getBlob(curs.getColumnIndex(COLUMN_CARD_IMAGE)) // IMAGE (ByteArray)
+                    curs.getString(curs.getColumnIndex(COLUMN_CARD_IMAGE)) // IMAGE (ByteArray)
                 )
                 newCardsList.add(newCard)
             } while (curs.moveToNext())
         }
+        return newCardsList
     }
 }

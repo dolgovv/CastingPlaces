@@ -4,18 +4,16 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.database.Cursor
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.ActivityResultCallback
-import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.TakePicture
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -23,7 +21,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.runtime.*
@@ -40,18 +37,45 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
+import androidx.loader.content.CursorLoader
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
-import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStream
 import java.util.*
+
 
 var mCardName = ""
 var mCardDescription = ""
 var mCardDate = ""
-var mCardLocation = ""
-var mCardBitmap: Bitmap? = null
+var mCardLocation = "1234567890"
+var mCardImage = ""
+
+//fun getRealPathFromURI(context: Context, contentUri: Uri): String? {
+//    var cursor: Cursor? = null
+//
+//        val proj = arrayOf(MediaStore.Images.Media.DATA)
+//        cursor = context.contentResolver.query(contentUri, proj, null, null, null)
+//        cursor!!.moveToFirst()
+//        val columnIndex = cursor.getColumnIndex(proj[0])
+//
+//        cursor.getString(columnIndex)
+//
+//    return cursor.getString(columnIndex)
+//}
+
+private fun getRealPathFromURI(context: Context, contentUri: Uri): String? {
+    val proj = arrayOf(MediaStore.Images.Media.DATA)
+    val loader = CursorLoader(context, contentUri, proj, null, null, null)
+    val cursor: Cursor? = loader.loadInBackground()
+    val column_index = cursor?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
+    cursor?.moveToFirst()
+    val result = column_index?.let { cursor.getString(it) }
+    cursor?.close()
+    return result
+}
 
 @Composable
 fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
@@ -61,12 +85,48 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
     var hasImage by remember { mutableStateOf(false) }
     val dialogShowVal = remember { mutableStateOf(false) }
+    val directory = File(context.filesDir, "images")
 
     val storageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
+    ) { uri: Uri ->
         imageUri = uri
-        hasImage = true }
+        val testImageUri: Uri = uri
+        hasImage = true
+//        imageUri?.let { getRealPathFromURI(context, it)
+//            val kek: String? = getRealPathFromURI(context, it)
+//            Log.d("DATA RECEIVE FROM COMPOSABLES: ", "KEK IS $kek")
+//        }
+
+        //TODO I/O STREAMS IMPLEMENTATION
+        val inputS = context.contentResolver.openInputStream(testImageUri) //GET STREAM FROM FILE
+        inputS?.let {
+
+            val byteArray = ByteArray(it.available()) //CREATE AN ARRAY WITH SIZE OF THE DATA FROM STREAM
+            it.read(byteArray) //GET DATA FROM STREAM TO AN ARRAY
+            /** NOW THE DATA FROM THE CHOSEN FILE SHOULD BE WRITTEN AT THE $byteArray */
+            val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+
+            val tempFile:File = File.createTempFile( //CREATE NEW TEMP FILE AT THE SAME DIRECTORY AS CAMERA LAUNCHER
+                "temp_file_selected_picture",
+                ".jpg",
+                directory )
+
+            val outS: OutputStream = FileOutputStream(tempFile) //OPEN STREAM TO THE TEMPFILE
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outS)
+            outS.write(byteArray) //SET DATA FROM STREAM TO AN ARRAY
+            /** NOW THE DATA FROM THE $byteArray SHOULD BE WRITTEN AT THE $tempFile */
+          //  tempFile
+
+            outS.close()
+            inputS.close()
+
+            mCardImage = tempFile.toString()
+            Log.d("DATA RECEIVE FROM COMPOSABLES: ", "TEMP FILE IS $tempFile")
+        }
+
+    }
+
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -74,13 +134,9 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
             hasImage = cameraLauncherResult
         })
 
-    val directory = File(context.filesDir, "images")
+
     /** IMPORTANT TO ADD IT BEFORE RELEASE */
     //if (!directory.exists()) { directory.mkdirs() }
-
-    val stream = ByteArrayOutputStream()
-   // mCardBitmap?.compress(Bitmap.CompressFormat.JPEG, 0, stream)
-    val cardImage = stream.toByteArray()
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -125,10 +181,17 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                             val source = ImageDecoder
                                 .createSource(context.contentResolver, it)
                             bitmap.value = ImageDecoder.decodeBitmap(source)
-                         mCardBitmap = bitmap.value
+                       // mCardBitmap = bitmap.value
                             hasImage = false
+                        //  mCardImage = imageUri.toString()
                             Log.d("DATA RECEIVE FROM COMPOSABLES: ",
-                                "mCardBitmap is $mCardBitmap")
+                                "mCardBitmap is $mCardImage")
+
+//                            val testResolver = context.contentResolver
+//                            val kek = testResolver.openInputStream(it)
+//                            val bitKek = BitmapFactory.decodeStream(kek)
+//                            Log.d("DATA RECEIVE FROM COMPOSABLES: ", "bitkek is $bitKek")
+
                         } } }
 
                 if (dialogShowVal.value) {
@@ -147,7 +210,11 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                                 tempFile )
 
                             imageUri = newPhotoContentUri
+                            mCardImage = tempFile.toString() /** TODO назначил картинкой для класса
+                        путь к временному файлу созданному камера лаунчером*/
 
+                            Log.d("DATA RECEIVE FROM COMPOSABLES: ",
+                                "newPhotoContentUri is $newPhotoContentUri")
                             cameraLauncher.launch(newPhotoContentUri)
                         } ) }
 
@@ -218,14 +285,49 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                     verticalArrangement = Arrangement.Bottom,
                     horizontalAlignment = Alignment.End
                 ) {
-                    ButtonNewCard {
-                        saveTheCard()
+                    AcceptNewCardButton {
+                        saveTheCard(context, navController)
                     }
                 } } } } }
 
-fun saveTheCard(){
+fun saveTheCard(context: Context, navController: NavController){
+//    val stream = ByteArrayOutputStream()
+//    mCardBitmap?.compress(Bitmap.CompressFormat.JPEG, 0, stream)
+//    val mCardByteArray: ByteArray = stream.toByteArray()
 
+    when {
+        mCardName == "" -> Toast.makeText(context, "Please, name your card", Toast.LENGTH_LONG).show()
+        mCardDescription == "" -> Toast.makeText(
+            context,
+            "Please, describe your card",
+            Toast.LENGTH_LONG
+        ).show()
+        mCardDate == "PICK YOUR DATE" -> Toast.makeText(context, "Please, add a date to your card", Toast.LENGTH_LONG)
+            .show()
+        mCardLocation == "" -> Toast.makeText(context, "Please, choose a location for your card", Toast.LENGTH_LONG)
+            .show()
+        mCardImage == "" -> Toast.makeText(context, "Please, select an image for your card", Toast.LENGTH_LONG)
+            .show()
 
+        else -> {
+            val createdCard: Card = Card(
+                0,
+                mCardName,
+                mCardDescription,
+                mCardDate,
+                mCardLocation,
+                mCardImage)
+            val dbHandler = SQLiteHelper(context)
+            val addPlace = dbHandler.addCard(createdCard)
+            Toast.makeText(context, "createdCard ${createdCard.getName()}", Toast.LENGTH_SHORT).show()
+
+            if (addPlace > 0) {
+                Toast.makeText(context, "success", Toast.LENGTH_SHORT).show()
+                navController.navigate(route = Screens.MainScreen.route)
+            }
+            //else {Toast.makeText(context, "huy akoyta", Toast.LENGTH_SHORT).show()}
+        }
+    }
 }
 
 
@@ -374,7 +476,7 @@ fun TextFields(isLong: Boolean, title: String) {
                     mCardName = cardTitle
                     Log.d("DATA RECEIVE FROM COMPOSABLES: ",
                         "mCardName is $mCardName")
-                } else cardTitle = cardTitle
+                }
             },
             singleLine = true,
             label = {
@@ -443,11 +545,11 @@ fun DefaultImage() {
             ) ) }
 
 @Composable
-fun ButtonNewCard(saveCard: () -> Unit) {
-    val mainContext = LocalContext.current
+fun AcceptNewCardButton(saveCard: () -> Unit) {
+
     FloatingActionButton(
         onClick = {
-
+                  saveCard()
         },
         backgroundColor = MaterialTheme.colors.surface,
     ) {
@@ -464,8 +566,8 @@ fun ButtonNewCard(saveCard: () -> Unit) {
 
 /** ======= PREVIEWS ======= */
 
-//@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Preview//(showBackground = true)
+@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(showBackground = true)
 @Composable
 fun FullPreview() {
     CastingPlacesTheme {

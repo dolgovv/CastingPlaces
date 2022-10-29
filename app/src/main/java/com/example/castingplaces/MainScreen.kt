@@ -1,12 +1,13 @@
 package com.example.castingplaces
 
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.net.Uri
 import android.util.Log
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -16,12 +17,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
@@ -29,16 +32,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.navigation.NavController
-import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
-import java.util.jar.Manifest
+import java.io.File
+import java.io.OutputStream
 
 
 @Composable
 fun HomeScreen(navController: NavController) {
+    val context = LocalContext.current
+    val db = SQLiteHelper(context)
+    val allCardsList: MutableList<Card> = db.getAllCards()
 
     Surface(
         modifier = Modifier
@@ -53,7 +59,7 @@ fun HomeScreen(navController: NavController) {
 
         ) {
             Toolbar(title = "Casting Places")
-            CardList(navController)
+            CardList(navController, allCardsList)
         }
 
         Column(
@@ -70,10 +76,19 @@ fun HomeScreen(navController: NavController) {
 }
 
 @Composable
-fun MainCard(title: String, subtitle: String, navController: NavController) {
+fun MainCard(title: String, subtitle: String, imageUri: String, navController: NavController) {
     val context = LocalContext.current
     val intent = Intent(context, CardInfo::class.java)
-    val stringTEST = "xdcfvgbhnjmk"
+    val stringTEST = "cheloweque"
+    val qooqoo: Bitmap? = BitmapFactory.decodeFile(imageUri)
+    //TODO мб тут превращать стрингу в путь
+//    imageUri.let {
+//        val source = ImageDecoder.createSource(context.contentResolver, imageUri)
+//        bitmap.value = ImageDecoder.decodeBitmap(source)
+//
+//    }
+    val outS =
+
     intent.putExtra("1", stringTEST)
 
     Card(
@@ -98,13 +113,27 @@ fun MainCard(title: String, subtitle: String, navController: NavController) {
             horizontalArrangement = Arrangement.Start
 
         ) {
-
-            Image(
-                painter = painterResource(id = R.drawable.ic_launcher_background),
-                contentDescription = "Card`s image",
+            Column(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(5.dp))
-            )
+                    .fillMaxHeight()
+                    .width(100.dp)
+                    .padding(horizontal = 10.dp),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.Start
+
+            ) {
+                if (qooqoo != null) {
+
+                    Image(
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        bitmap = qooqoo.asImageBitmap(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                         //  .clip(RoundedCornerShape(10.dp)),
+                    )
+                } else DefaultImage()
+            }
 
             Column(
                 modifier = Modifier
@@ -128,14 +157,18 @@ fun MainCard(title: String, subtitle: String, navController: NavController) {
 }
 
 @Composable
-fun CardList(navController: NavController,
-             list: List<String> = List(2) { "$it" },
-             cardTitle: String = "Unknown kartochka",
-             ) {
+fun CardList(
+    navController: NavController,
+    list: MutableList<Card>,
+    cardTitle: String = "Unknown kartochka",
+) {
+
     LazyColumn() {
         items(items = list) { list ->
-            MainCard(title = cardTitle,
-                subtitle = "pizdec, uzhe $list kartochka",
+            MainCard(
+                title = list.getName(),
+                subtitle = list.getDescription(),
+                imageUri = list.getImage(),
                 navController = navController
             )
         }
@@ -169,11 +202,7 @@ fun FloatButton(navController: NavController) {
 }
 
 
-
 /** ================= */
-
-
-
 
 /** PREVIEWS */
 
@@ -219,6 +248,11 @@ fun FloatButton(navController: NavController) {
 @Composable
 fun MainPreview1() {
     CastingPlacesTheme {
-        HomeScreen(navController = rememberNavController())
+        MainCard(
+            title = "Test",
+            subtitle = "testest",
+            imageUri = "/data/data/com.example.castingplaces/files/images/temp_file_selected_picture157354779621164714.jpg",
+            navController = rememberNavController()
+        )
     }
 }

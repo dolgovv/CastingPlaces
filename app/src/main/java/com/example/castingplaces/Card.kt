@@ -11,7 +11,7 @@ class Card(
     private var _description: String,
     private var _date: String,
     private var _location: String,
-    private var _image: ByteArray,
+    private var _image: String,
 ) {
 
     fun getId(): Int {
@@ -59,14 +59,14 @@ class Card(
         this._location = location
     }
 
-    fun getImage(): ByteArray {
+    fun getImage(): String {
 //        val stream = ByteArrayOutputStream()
 //        _image.compress(Bitmap.CompressFormat.JPEG, 0, stream)
 //        return stream.toByteArray()
         return _image
     }
 
-    fun setImage(image: ByteArray) {
+    fun setImage(image: String) {
         this._image = image
     }
 }
