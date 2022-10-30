@@ -8,7 +8,9 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,6 +32,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -44,7 +47,9 @@ import java.io.OutputStream
 fun HomeScreen(navController: NavController) {
     val context = LocalContext.current
     val db = SQLiteHelper(context)
-    val allCardsList: MutableList<Card> = db.getAllCards()
+    val allCardsList: MutableList<Card> = remember {
+        db.getAllCards()
+    }
 
     Surface(
         modifier = Modifier
@@ -78,8 +83,6 @@ fun HomeScreen(navController: NavController) {
 @Composable
 fun MainCard(title: String, subtitle: String, imageUri: String, navController: NavController) {
     val context = LocalContext.current
-    val intent = Intent(context, CardInfo::class.java)
-    val stringTEST = "cheloweque"
     val qooqoo: Bitmap? = BitmapFactory.decodeFile(imageUri)
     //TODO мб тут превращать стрингу в путь
 //    imageUri.let {
@@ -87,9 +90,62 @@ fun MainCard(title: String, subtitle: String, imageUri: String, navController: N
 //        bitmap.value = ImageDecoder.decodeBitmap(source)
 //
 //    }
-    val outS =
+    //val outS#
 
-    intent.putExtra("1", stringTEST)
+    /** LAGAET */
+//    Card(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .height(150.dp)
+//            .padding(horizontal = 20.dp)
+//            .padding(top = 10.dp)
+//            .clickable {
+//                navController.navigate(route = Screens.CardDetailsScreen.route)
+//            },
+//        shape = MaterialTheme.shapes.medium,
+//        elevation = 5.dp,
+//
+//        ) {
+//        Row(
+//            modifier = Modifier
+//                .fillMaxSize(0.2f)
+//                .padding(10.dp),
+//        horizontalArrangement = Arrangement.Start,
+//        verticalAlignment = Alignment.CenterVertically)
+//        {
+//            Column(
+//                modifier = Modifier
+//                    .fillMaxHeight()
+//                    .width(120.dp)
+//
+//
+//            ) {
+//                if (qooqoo != null) {
+//                    Image(
+//                        contentDescription = null,
+//                        contentScale = ContentScale.Crop,
+//                        bitmap = qooqoo.asImageBitmap(),
+//                        modifier = Modifier
+//                            .clip(RoundedCornerShape(10.dp)),
+//                    )
+//                } else
+//                    DefaultCardImage()
+//            }
+//            DefaultCardImage()
+////            Column(
+////                modifier = Modifier
+////                    .fillMaxSize()
+////            ) {
+////
+////            }
+//
+//        }
+//
+//    }
+//}
+
+
+/** LAGAET */
 
     Card(
         modifier = Modifier
@@ -116,8 +172,7 @@ fun MainCard(title: String, subtitle: String, imageUri: String, navController: N
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
-                    .width(100.dp)
-                    .padding(horizontal = 10.dp),
+                    .width(120.dp),
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.Start
 
@@ -130,9 +185,9 @@ fun MainCard(title: String, subtitle: String, imageUri: String, navController: N
                         bitmap = qooqoo.asImageBitmap(),
                         modifier = Modifier
                             .fillMaxSize()
-                         //  .clip(RoundedCornerShape(10.dp)),
+                            .clip(RoundedCornerShape(10.dp)),
                     )
-                } else DefaultImage()
+                } else DefaultCardImage()
             }
 
             Column(
@@ -159,8 +214,7 @@ fun MainCard(title: String, subtitle: String, imageUri: String, navController: N
 @Composable
 fun CardList(
     navController: NavController,
-    list: MutableList<Card>,
-    cardTitle: String = "Unknown kartochka",
+    list: MutableList<Card>
 ) {
 
     LazyColumn() {
@@ -174,6 +228,22 @@ fun CardList(
         }
     }
 }
+
+@Composable
+fun DefaultCardImage() {
+    Image(
+        painter = painterResource(id = R.drawable.ic_launcher_background),
+        contentDescription = "default image",
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(RoundedCornerShape(10.dp))
+            .border(
+                border = BorderStroke(
+                    Dp.Hairline,
+                    MaterialTheme.colors.onSurface
+                )
+            )
+    ) }
 
 @Composable
 fun Toolbar(title: String) {
