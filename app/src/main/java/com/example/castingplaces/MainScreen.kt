@@ -81,7 +81,7 @@ fun HomeScreen(navController: NavController) {
 }
 
 @Composable
-fun MainCard(title: String, subtitle: String, imageUri: String, navController: NavController) {
+fun MainCard(id: Int, title: String, subtitle: String, imageUri: String, navController: NavController) {
     val context = LocalContext.current
     val qooqoo: Bitmap? = BitmapFactory.decodeFile(imageUri)
     //TODO мб тут превращать стрингу в путь
@@ -154,7 +154,10 @@ fun MainCard(title: String, subtitle: String, imageUri: String, navController: N
             .padding(horizontal = 20.dp)
             .padding(top = 10.dp)
             .clickable {
-                navController.navigate(route = Screens.CardDetailsScreen.route)
+                navController.navigate(Screens.CardInfoActivity.route + "/$id")
+                Toast
+                    .makeText(context, "$id", Toast.LENGTH_SHORT)
+                    .show()
             },
         shape = MaterialTheme.shapes.medium,
         elevation = 5.dp,
@@ -220,6 +223,7 @@ fun CardList(
     LazyColumn() {
         items(items = list) { list ->
             MainCard(
+                id = list.getId(),
                 title = list.getName(),
                 subtitle = list.getDescription(),
                 imageUri = list.getImage(),
@@ -319,6 +323,7 @@ fun FloatButton(navController: NavController) {
 fun MainPreview1() {
     CastingPlacesTheme {
         MainCard(
+            id = 0,
             title = "Test",
             subtitle = "testest",
             imageUri = "/data/data/com.example.castingplaces/files/images/temp_file_selected_picture157354779621164714.jpg",

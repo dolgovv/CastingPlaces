@@ -47,7 +47,7 @@ import java.util.*
 
 var mCardName = ""
 var mCardDescription = ""
-var mCardDate = ""
+var mCardDate = "PICK YOUR DATE"
 var mCardLocation = "1234567890"
 var mCardImage = ""
 
@@ -277,7 +277,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
 
 
     /** IMPORTANT TO ADD IT BEFORE RELEASE */
-    //if (!directory.exists()) { directory.mkdirs() }
+    if (!directory.exists()) { directory.mkdirs() }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -700,7 +700,8 @@ fun AcceptNewCardButton(saveCard: () -> Unit) {
         backgroundColor = MaterialTheme.colors.surface,
     ) {
         Icon(
-            Icons.Filled.Done, contentDescription = null,
+            Icons.Filled.Done,
+            contentDescription = null,
             modifier = Modifier
                 .size(50.dp),
             contentColorFor(backgroundColor = MaterialTheme.colors.surface)

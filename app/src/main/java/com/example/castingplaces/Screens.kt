@@ -6,6 +6,7 @@ sealed class Screens (val route: String){
     object MainScreen : Screens("main_screen")
     object CardDetailsScreen : Screens("card_details_screen")
     object CardInfoPickerScreen: Screens("card_info_picker_screen")
+    object CardInfoActivity : Screens("card_info_activity")
 
     fun withArgs(vararg args: String): String{
         return buildString {
