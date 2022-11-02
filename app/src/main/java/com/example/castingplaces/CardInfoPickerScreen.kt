@@ -4,12 +4,10 @@ import android.app.DatePickerDialog
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
-import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -37,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
-import androidx.loader.content.CursorLoader
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
@@ -53,156 +50,28 @@ var mCardImage = ""
 
 lateinit var testGlobalTempFile: File
 
-//fun getRealPathFromURI(context: Context, contentUri: Uri): String? {
-//    var cursor: Cursor? = null
-//
-//        val proj = arrayOf(MediaStore.Images.Media.DATA)
-//        cursor = context.contentResolver.query(contentUri, proj, null, null, null)
-//        cursor!!.moveToFirst()
-//        val columnIndex = cursor.getColumnIndex(proj[0])
-//
-//        cursor.getString(columnIndex)
-//
-//    return cursor.getString(columnIndex)
-//}
-
-private fun getRealPathFromURI(context: Context, contentUri: Uri): String? {
-    val proj = arrayOf(MediaStore.Images.Media.DATA)
-    val loader = CursorLoader(context, contentUri, proj, null, null, null)
-    val cursor: Cursor? = loader.loadInBackground()
-    val column_index = cursor?.getColumnIndexOrThrow(MediaStore.Images.Media.DATA)
-    cursor?.moveToFirst()
-    val result = column_index?.let { cursor.getString(it) }
-    cursor?.close()
-    return result
-}
 
 private fun compressImageFile(context: Context, file: File): Boolean {
-    Log.d("DATA RECEIVE FROM COMPOSABLES: ", "KEK IS $file")
     var result = false
     val uwu = Uri.fromFile(file)                                        //ПОЛУЧИЛ УРИ
     val inputS = context.contentResolver.openInputStream(uwu)          //ОТКРЫЛ СВЯЗЬ С ФАЙЛОМ
 
     if (inputS != null){
-        val inData = ByteArray(inputS.available())                     //создал массив с нужным размером
-        inputS.read(inData)                                             //записал картинку в массив
+        val inData = ByteArray(inputS.available())                //создал массив с нужным размером
+        inputS.read(inData)                                       //записал картинку в массив
         val bitmap = BitmapFactory.decodeByteArray(inData,
             0,
             inData.size)                                                //сделал битмапу из массива
-
+        inputS.close()
         val outputS: OutputStream = FileOutputStream(file)           //открыл связь с файлом записи
 
-        val qooqoo: Boolean = bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputS)//сжал битмапу
-        result = qooqoo
-        //outputS.write(inData)
-        //перегнал битмапу в массив
-        //записал массив в файл
+        val compressedBitmap: Boolean = bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputS)//сжал битмапу
+        result = compressedBitmap
         outputS.flush()
         outputS.close()
     } else { Log.d("DATA RECEIVE FROM COMPOSABLES: ", "inputS is kinda null: $inputS") }
 
-
-//    inputS?.let {
-//        val inData = ByteArray(it.available())                     //создал массив с нужным размером
-//        it.read(inData)                                             //записал картинку в массив
-//        val bitmap = BitmapFactory.decodeByteArray(inData,
-//            0,
-//            inData.size)                                                //сделал битмапу из массива
-//
-//        val outputS: OutputStream = FileOutputStream(file)           //открыл связь с файлом записи
-//        outputS.write(inData)
-//        val qooqoo: Boolean = bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputS)//сжал битмапу
-//        result = qooqoo
-//        //перегнал битмапу в массив
-//        //записал массив в файл
-//        outputS.flush()
-//        outputS.close()
-//    }
-
-return result
-}
-
-private fun compressPhotoFile(context: Context, uri: Uri): Boolean {
-    Log.d("DATA RECEIVE FROM COMPOSABLES: ", "KEK IS $uri")
-    var result = false
-    //ПОЛУЧИЛ УРИ
-    val inputS = context.contentResolver.openInputStream(uri)          //ОТКРЫЛ СВЯЗЬ С ФАЙЛОМ
-
-    if (inputS != null){
-        val inData = ByteArray(inputS.available())                     //создал массив с нужным размером
-        inputS.read(inData)                                             //записал картинку в массив
-        val bitmap = BitmapFactory.decodeByteArray(inData,
-            0,
-            inData.size)                                                //сделал битмапу из массива
-
-        val outputS: OutputStream? = context.contentResolver.openOutputStream(uri) //открыл связь с файлом записи
-        if (outputS != null) {
-            val qooqoo: Boolean =
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 60, outputS)//сжал битмапу
-            result = qooqoo
-            outputS.flush()
-            outputS.close()
-        }
-        //outputS.write(inData)
-        //перегнал битмапу в массив
-        //записал массив в файл
-
-
-    } else { Log.d("DATA RECEIVE FROM COMPOSABLES: ", "inputS is kinda null: $inputS") }
-
-
-//    inputS?.let {
-//        val inData = ByteArray(it.available())                     //создал массив с нужным размером
-//        it.read(inData)                                             //записал картинку в массив
-//        val bitmap = BitmapFactory.decodeByteArray(inData,
-//            0,
-//            inData.size)                                                //сделал битмапу из массива
-//
-//        val outputS: OutputStream = FileOutputStream(file)           //открыл связь с файлом записи
-//        outputS.write(inData)
-//        val qooqoo: Boolean = bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputS)//сжал битмапу
-//        result = qooqoo
-//        //перегнал битмапу в массив
-//        //записал массив в файл
-//        outputS.flush()
-//        outputS.close()
-//    }
-
-    return result
-}
-
-//fun compressImage(image: Bitmap): Bitmap? {
-//    val baos = ByteArrayOutputStream()
-//    image.compress(Bitmap.CompressFormat.JPEG, 100, baos) // 100baos
-//    var options = 100
-//    while (baos.toByteArray().size / 1024 > 100) { // 100kb,
-//        baos.reset() // baosbaos
-//        image.compress(Bitmap.CompressFormat.JPEG, options, baos) // options%baos
-//        options -= 10 // 10
-//    }
-//    val isBm = ByteArrayInputStream(
-//        baos.toByteArray()
-//    ) // baosByteArrayInputStream
-//    return BitmapFactory.decodeStream(isBm, null, null)
-//}
-
-fun shrinkMethod(file: String?, width: Int, height: Int): Bitmap? {
-    val bitopt = BitmapFactory.Options()
-    bitopt.inJustDecodeBounds = true
-    var bit = BitmapFactory.decodeFile(file, bitopt)
-    val h = Math.ceil((bitopt.outHeight / height.toFloat()).toDouble()).toInt()
-    val w = Math.ceil((bitopt.outWidth / width.toFloat()).toDouble()).toInt()
-    if (h > 1 || w > 1) {
-        if (h > w) {
-            bitopt.inSampleSize = h
-        } else {
-            bitopt.inSampleSize = w
-        }
-    }
-    bitopt.inJustDecodeBounds = false
-    bit = BitmapFactory.decodeFile(file, bitopt)
-    return bit
-}
+    return result }
 
 @Composable
 fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
@@ -213,46 +82,27 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
     var hasImage by remember { mutableStateOf(false) }
     val dialogShowVal = remember { mutableStateOf(false) }
     val directory = File(context.filesDir, "images")
+    if (!directory.exists()) { directory.mkdirs() }
 
     val storageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri ->
         imageUri = uri
-        val testImageUri: Uri = uri
+        val copyImageUri: Uri = uri
         hasImage = true
-//        imageUri?.let { getRealPathFromURI(context, it)
-//            val kek: String? = getRealPathFromURI(context, it)
-//            Log.d("DATA RECEIVE FROM COMPOSABLES: ", "KEK IS $kek")
-//        }
-
-        //TODO I/O STREAMS IMPLEMENTATION
-        /**
-         * НАЛАДИТЬ СТРИМ К ФАЙЛУ ЧТОБЫ СЧИТАТЬ ЕГО ДАТУ
-         * ЗАПИСАТЬ ДАТУ В МАССИВ
-         * ПОЛУЧИТЬ БИТМАПУ ИЗ МАССИВА
-         *
-         *
-         *
-         *
-         * */
-        val inputS = context.contentResolver.openInputStream(testImageUri) //GET STREAM FROM FILE
+        val inputS = context.contentResolver.openInputStream(copyImageUri) //GET STREAM FROM FILE
         inputS?.let {
 
-            val byteArray = ByteArray(it.available()) //CREATE AN ARRAY
-            it.read(byteArray) //GET DATA FROM STREAM TO AN ARRAY
+            val byteArray = ByteArray(it.available())
+            it.read(byteArray)                                  //GET DATA FROM STREAM TO AN ARRAY
             /** NOW THE DATA FROM THE CHOSEN FILE SHOULD BE WRITTEN AT THE $byteArray */
-            val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
 
-           // val compressedBitmap = compressImage(bitmap)
-            //val compressedByteArray = ByteArray(it.available())
-            val tempFile:File = File.createTempFile( //CREATE NEW TEMP FILE AT THE SAME DIRECTORY AS CAMERA LAUNCHER
+            val tempFile:File = File.createTempFile(
                 "temp_file_selected_picture",
                 ".jpg",
                 directory )
-
             val outS: OutputStream = FileOutputStream(tempFile) //OPEN STREAM TO THE TEMPFILE
-           // bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outS)
-            outS.write(byteArray) //SET DATA FROM STREAM TO AN ARRAY
+             outS.write(byteArray)
             /** NOW THE DATA FROM THE $byteArray SHOULD BE WRITTEN AT THE $tempFile */
             outS.flush()
             outS.close()
@@ -262,9 +112,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
             mCardImage = tempFile.toString()
             Log.d("DATA RECEIVE FROM COMPOSABLES: ", "TEMP FILE IS $tempFile")
         }
-
     }
-
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
@@ -272,12 +120,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
             hasImage = cameraLauncherResult
             if (hasImage){
                 compressImageFile(context, testGlobalTempFile)
-            }
-        })
-
-
-    /** IMPORTANT TO ADD IT BEFORE RELEASE */
-    if (!directory.exists()) { directory.mkdirs() }
+            } } )
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -303,8 +146,6 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = null)
                     } } )
 
-
-
             Column(
                 modifier = Modifier
                     .fillMaxHeight(0.4f)
@@ -322,18 +163,9 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                             val source = ImageDecoder
                                 .createSource(context.contentResolver, it)
                             bitmap.value = ImageDecoder.decodeBitmap(source)
-                       // mCardBitmap = bitmap.value
                             hasImage = false
-                        //  mCardImage = imageUri.toString()
                             Log.d("DATA RECEIVE FROM COMPOSABLES: ",
-                                "mCardBitmap is $mCardImage")
-
-//                            val testResolver = context.contentResolver
-//                            val kek = testResolver.openInputStream(it)
-//                            val bitKek = BitmapFactory.decodeStream(kek)
-//                            Log.d("DATA RECEIVE FROM COMPOSABLES: ", "bitkek is $bitKek")
-
-                        } } }
+                                "mCardBitmap is $mCardImage") } } }
 
                 if (dialogShowVal.value) {
                     SourceDialog(
@@ -357,9 +189,6 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                             Log.d("DATA RECEIVE FROM COMPOSABLES: ",
                                 "newPhotoContentUri is $newPhotoContentUri")
                             cameraLauncher.launch(newPhotoContentUri)
-//                            if (hasImage){
-//                                compressImageFile(context, tempFile)
-//                            }
                         } ) }
 
                 TextFields(isLong = false, title = "Title")
@@ -403,8 +232,6 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                         if (bitmap.value != null) {
                             bitmap.value?.let { btm ->
                                 PickedImage(bitmap = btm)
-                              //  mCardBitmap = btm
-
                             }
                         } else {
                             DefaultImage()
@@ -430,13 +257,9 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                 ) {
                     AcceptNewCardButton {
                         saveTheCard(context, navController)
-                    }
-                } } } } }
+                    } } } } } }
 
 fun saveTheCard(context: Context, navController: NavController){
-//    val stream = ByteArrayOutputStream()
-//    mCardBitmap?.compress(Bitmap.CompressFormat.JPEG, 0, stream)
-//    val mCardByteArray: ByteArray = stream.toByteArray()
 
     when {
         mCardName == "" -> Toast.makeText(context, "Please, name your card", Toast.LENGTH_LONG).show()
@@ -453,7 +276,7 @@ fun saveTheCard(context: Context, navController: NavController){
             .show()
 
         else -> {
-            val createdCard: Card = Card(
+            val createdCard = Card(
                 0,
                 mCardName,
                 mCardDescription,
@@ -468,11 +291,7 @@ fun saveTheCard(context: Context, navController: NavController){
             if (addPlace > 0) {
                 Toast.makeText(context, "success", Toast.LENGTH_SHORT).show()
                 navController.navigate(route = Screens.MainScreen.route)
-            }
-            //else {Toast.makeText(context, "huy akoyta", Toast.LENGTH_SHORT).show()}
-        }
-    }
-}
+            } } } }
 
 
 /** BUTTONS */
@@ -693,9 +512,7 @@ fun DefaultImage() {
 fun AcceptNewCardButton(saveCard: () -> Unit) {
 
     FloatingActionButton(
-        onClick = {
-                  saveCard()
-        },
+        onClick = { saveCard() },
         backgroundColor = MaterialTheme.colors.surface,
     ) {
         Icon(

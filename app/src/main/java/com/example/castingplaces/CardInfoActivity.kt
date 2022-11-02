@@ -72,14 +72,10 @@ fun CardInfoScreen(id: Int, navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 InfoMain(card = currentCard)
-            }
-        }
-    }
-}
+            } } } }
 
 @Composable
 fun InfoMain(card: Card) {
-    val context = LocalContext.current
     val inputS = FileInputStream(card.getImage())
     val inData = ByteArray(inputS.available())
     inputS.read(inData)
@@ -104,12 +100,6 @@ fun InfoMain(card: Card) {
 
 @Composable
 fun CardInfoImage(bitmap: Bitmap) {
-    val gradient = Brush.verticalGradient(
-        colors = listOf(Color.Transparent, Color.Black),
-        startY = bitmap.height.toFloat(),
-        endY = bitmap.height.toFloat()
-    )
-    val gradientGreenRed = Brush.horizontalGradient(0f to Color.Green, 1000f to Color.Red)
     Box(
         modifier = Modifier
             .height(250.dp)
@@ -157,12 +147,9 @@ fun OpenAndEditImage() {
 @Composable
 fun TextInfo(card: Card) {
     val context = LocalContext.current
-//    val isEditable by remember {
-//        mutableStateOf(false)
-//    }
+
     var isEditable by remember {
-        mutableStateOf<Boolean>(false)
-    }
+        mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -176,7 +163,7 @@ fun TextInfo(card: Card) {
                 .fillMaxWidth()
                 .padding(top = 10.dp),
             value = card.getName(),
-            onValueChange = { it },
+            onValueChange = { /** TODO onValueChange */ it },
             enabled = isEditable,
             label = { Text(text = "Title") },
             trailingIcon = {
@@ -200,7 +187,6 @@ fun TextInfo(card: Card) {
                     )
                 }
             })
-
 
         OutlinedTextField(
             modifier = Modifier
@@ -232,7 +218,6 @@ fun TextInfo(card: Card) {
                 }
             })
 
-
         OutlinedButton(
             modifier = Modifier
                 .fillMaxWidth()
@@ -261,9 +246,6 @@ fun TextInfo(card: Card) {
             Text(text = card.getLocation())
         }
 
-
-
-
         Column(modifier = Modifier
             .fillMaxSize()
             .padding(bottom = 10.dp)
@@ -274,7 +256,7 @@ fun TextInfo(card: Card) {
 
             FloatingActionButton(
                 onClick = { isEditable = !isEditable
-                          if (isEditable == true){
+                          if (isEditable){
                               Toast.makeText(context, "isEditable = true", Toast.LENGTH_SHORT).show()
                           }else{
                               Toast.makeText(context, "isEditable = false", Toast.LENGTH_SHORT).show()
@@ -295,42 +277,7 @@ fun TextInfo(card: Card) {
                         modifier = Modifier
                             .size(30.dp),
                         contentColorFor(backgroundColor = MaterialTheme.colors.surface))
-                }
-
-            }
-
-
-
-
-//            if (!isEditable){
-//                FloatingActionButton(
-//                    onClick = { isEditable = true },
-//                    backgroundColor = MaterialTheme.colors.surface,
-//                ) {
-//                    Icon(
-//                        Icons.Filled.Edit,
-//                        contentDescription = null,
-//                        modifier = Modifier
-//                            .size(30.dp),
-//                        contentColorFor(backgroundColor = MaterialTheme.colors.surface))
-//                }
-//            } else{
-//                FloatingActionButton(
-//                    onClick = { isEditable = false
-//                              /** TODO saveChangedCard() */},
-//                    backgroundColor = MaterialTheme.colors.surface,
-//                ) {
-//                    Icon(
-//                        Icons.Filled.Done,
-//                        contentDescription = null,
-//                        modifier = Modifier
-//                            .size(30.dp),
-//                        contentColorFor(backgroundColor = MaterialTheme.colors.surface))
-//                }
-//            }
-        }
-    }
-}
+                } } } } }
 
 @Preview(showBackground = true)
 @Composable
