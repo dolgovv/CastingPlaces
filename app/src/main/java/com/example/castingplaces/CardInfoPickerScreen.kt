@@ -423,8 +423,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                                 dialogShowVal.value = true
                             } ) } }
                 Column(modifier = Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(bottom = 20.dp),
                     verticalArrangement = Arrangement.Bottom,
                     horizontalAlignment = Alignment.End
