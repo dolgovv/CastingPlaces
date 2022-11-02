@@ -56,22 +56,28 @@ private fun compressImageFile(context: Context, file: File): Boolean {
     val uwu = Uri.fromFile(file)                                        //ПОЛУЧИЛ УРИ
     val inputS = context.contentResolver.openInputStream(uwu)          //ОТКРЫЛ СВЯЗЬ С ФАЙЛОМ
 
-    if (inputS != null){
+    if (inputS != null) {
         val inData = ByteArray(inputS.available())                //создал массив с нужным размером
         inputS.read(inData)                                       //записал картинку в массив
-        val bitmap = BitmapFactory.decodeByteArray(inData,
+        val bitmap = BitmapFactory.decodeByteArray(
+            inData,
             0,
-            inData.size)                                                //сделал битмапу из массива
+            inData.size
+        )                                                //сделал битмапу из массива
         inputS.close()
         val outputS: OutputStream = FileOutputStream(file)           //открыл связь с файлом записи
 
-        val compressedBitmap: Boolean = bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputS)//сжал битмапу
+        val compressedBitmap: Boolean =
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputS)//сжал битмапу
         result = compressedBitmap
         outputS.flush()
         outputS.close()
-    } else { Log.d("DATA RECEIVE FROM COMPOSABLES: ", "inputS is kinda null: $inputS") }
+    } else {
+        Log.d("DATA RECEIVE FROM COMPOSABLES: ", "inputS is kinda null: $inputS")
+    }
 
-    return result }
+    return result
+}
 
 @Composable
 fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
@@ -82,7 +88,9 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
     var hasImage by remember { mutableStateOf(false) }
     val dialogShowVal = remember { mutableStateOf(false) }
     val directory = File(context.filesDir, "images")
-    if (!directory.exists()) { directory.mkdirs() }
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
 
     val storageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -97,12 +105,13 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
             it.read(byteArray)                                  //GET DATA FROM STREAM TO AN ARRAY
             /** NOW THE DATA FROM THE CHOSEN FILE SHOULD BE WRITTEN AT THE $byteArray */
 
-            val tempFile:File = File.createTempFile(
+            val tempFile: File = File.createTempFile(
                 "temp_file_selected_picture",
                 ".jpg",
-                directory )
+                directory
+            )
             val outS: OutputStream = FileOutputStream(tempFile) //OPEN STREAM TO THE TEMPFILE
-             outS.write(byteArray)
+            outS.write(byteArray)
             /** NOW THE DATA FROM THE $byteArray SHOULD BE WRITTEN AT THE $tempFile */
             outS.flush()
             outS.close()
@@ -118,9 +127,10 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
         contract = ActivityResultContracts.TakePicture(),
         onResult = { cameraLauncherResult: Boolean ->
             hasImage = cameraLauncherResult
-            if (hasImage){
+            if (hasImage) {
                 compressImageFile(context, testGlobalTempFile)
-            } } )
+            }
+        })
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -141,10 +151,11 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                     IconButton(onClick = {
 
                         navController.popBackStack()
-                    } ) {
+                    }) {
 
                         Icon(Icons.Filled.ArrowBack, contentDescription = null)
-                    } } )
+                    }
+                })
 
             Column(
                 modifier = Modifier
@@ -164,8 +175,13 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                                 .createSource(context.contentResolver, it)
                             bitmap.value = ImageDecoder.decodeBitmap(source)
                             hasImage = false
-                            Log.d("DATA RECEIVE FROM COMPOSABLES: ",
-                                "mCardBitmap is $mCardImage") } } }
+                            Log.d(
+                                "DATA RECEIVE FROM COMPOSABLES: ",
+                                "mCardBitmap is $mCardImage"
+                            )
+                        }
+                    }
+                }
 
                 if (dialogShowVal.value) {
                     SourceDialog(
@@ -174,22 +190,28 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                         runCameraLauncher = {
                             val tempFile: File = File.createTempFile(
                                 "temp_file_selected_picture",
-                                ".jpg", directory )
+                                ".jpg", directory
+                            )
 
                             val newPhotoContentUri = FileProvider.getUriForFile(
                                 context,
                                 BuildConfig.APPLICATION_ID + ".fileprovider",
-                                tempFile )
+                                tempFile
+                            )
 
                             imageUri = newPhotoContentUri
 
-                            mCardImage = tempFile.toString() /** TODO назначил картинкой для класса
-                        путь к временному файлу созданному камера лаунчером*/
+                            mCardImage = tempFile.toString()
+                            /** TODO назначил картинкой для класса
+                            путь к временному файлу созданному камера лаунчером*/
                             testGlobalTempFile = tempFile
-                            Log.d("DATA RECEIVE FROM COMPOSABLES: ",
-                                "newPhotoContentUri is $newPhotoContentUri")
+                            Log.d(
+                                "DATA RECEIVE FROM COMPOSABLES: ",
+                                "newPhotoContentUri is $newPhotoContentUri"
+                            )
                             cameraLauncher.launch(newPhotoContentUri)
-                        } ) }
+                        })
+                }
 
                 TextFields(isLong = false, title = "Title")
                 TextFields(isLong = true, title = "Description")
@@ -204,7 +226,8 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                 ) {
 
                     Text(text = "PICK A LOCATION")
-                } }
+                }
+            }
 
             Column(
                 modifier = Modifier
@@ -235,7 +258,8 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                             }
                         } else {
                             DefaultImage()
-                        } }
+                        }
+                    }
 
                     Column(
                         modifier = Modifier
@@ -248,31 +272,52 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                         ButtonAddImage(
                             dialogShow = {
                                 dialogShowVal.value = true
-                            } ) } }
-                Column(modifier = Modifier
-                    .fillMaxSize()
-                    .padding(bottom = 20.dp),
+                            })
+                    }
+                }
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = 20.dp),
                     verticalArrangement = Arrangement.Bottom,
                     horizontalAlignment = Alignment.End
                 ) {
                     AcceptNewCardButton {
                         saveTheCard(context, navController)
-                    } } } } } }
+                    }
+                }
+            }
+        }
+    }
+}
 
-fun saveTheCard(context: Context, navController: NavController){
+fun saveTheCard(context: Context, navController: NavController) {
 
     when {
-        mCardName == "" -> Toast.makeText(context, "Please, name your card", Toast.LENGTH_LONG).show()
+        mCardName == "" -> Toast.makeText(context, "Please, name your card", Toast.LENGTH_LONG)
+            .show()
         mCardDescription == "" -> Toast.makeText(
             context,
             "Please, describe your card",
             Toast.LENGTH_LONG
         ).show()
-        mCardDate == "PICK YOUR DATE" -> Toast.makeText(context, "Please, add a date to your card", Toast.LENGTH_LONG)
+        mCardDate == "PICK YOUR DATE" -> Toast.makeText(
+            context,
+            "Please, add a date to your card",
+            Toast.LENGTH_LONG
+        )
             .show()
-        mCardLocation == "" -> Toast.makeText(context, "Please, choose a location for your card", Toast.LENGTH_LONG)
+        mCardLocation == "" -> Toast.makeText(
+            context,
+            "Please, choose a location for your card",
+            Toast.LENGTH_LONG
+        )
             .show()
-        mCardImage == "" -> Toast.makeText(context, "Please, select an image for your card", Toast.LENGTH_LONG)
+        mCardImage == "" -> Toast.makeText(
+            context,
+            "Please, select an image for your card",
+            Toast.LENGTH_LONG
+        )
             .show()
 
         else -> {
@@ -282,16 +327,21 @@ fun saveTheCard(context: Context, navController: NavController){
                 mCardDescription,
                 mCardDate,
                 mCardLocation,
-                mCardImage)
+                mCardImage
+            )
             val dbHandler = SQLiteHelper(context)
 
             val addPlace = dbHandler.addCard(createdCard)
-            Toast.makeText(context, "createdCard ${createdCard.getName()}", Toast.LENGTH_SHORT).show()
 
             if (addPlace > 0) {
-                Toast.makeText(context, "success", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "You created a ${createdCard.getName()} card",
+                    Toast.LENGTH_LONG)
+                    .show()
                 navController.navigate(route = Screens.MainScreen.route)
-            } } } }
+            }
+        }
+    }
+}
 
 
 /** BUTTONS */
@@ -307,7 +357,9 @@ fun ButtonAddImage(
         Text(
             text = "ADD IMAGE",
             fontSize = 16.sp
-        ) } }
+        )
+    }
+}
 
 @Composable
 fun DatePickerButton() {
@@ -330,8 +382,10 @@ fun DatePickerButton() {
 
             buttonText = "$slctddayOfMonth/${slctdmonth + 1}/$slctdyear"
             mCardDate = buttonText
-            Log.d("DATA RECEIVE FROM COMPOSABLES: ",
-                "mCardDate is $mCardDate")
+            Log.d(
+                "DATA RECEIVE FROM COMPOSABLES: ",
+                "mCardDate is $mCardDate"
+            )
         },
         currentYear,
         currentMonth,
@@ -350,7 +404,8 @@ fun DatePickerButton() {
     ) {
 
         Text(text = buttonText)
-    } }
+    }
+}
 
 @Composable
 fun ButtonImageSourcePicker(
@@ -372,7 +427,8 @@ fun ButtonImageSourcePicker(
             Log.d("ExampleScreen", "PERMISSION GRANTED")
         } else {
             Log.d("ExampleScreen", "PERMISSION DENIED")
-        } }
+        }
+    }
 
     TextButton(modifier = Modifier.padding(10.dp),
         onClick = {
@@ -397,11 +453,15 @@ fun ButtonImageSourcePicker(
                     dialogShow()
                 } else {
                     permLauncher.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
-                } } } ) {
+                }
+            }
+        }) {
         Text(
             text = title,
             fontSize = 20.sp
-        ) } }
+        )
+    }
+}
 
 /** OTHER SURFACES */
 
@@ -409,10 +469,12 @@ fun ButtonImageSourcePicker(
 fun TextFields(isLong: Boolean, title: String) {
 
     var cardTitle: String by remember {
-        mutableStateOf("") }
+        mutableStateOf("")
+    }
 
     var cardDescription: String by remember {
-        mutableStateOf("") }
+        mutableStateOf("")
+    }
 
     if (isLong) {
 
@@ -421,12 +483,16 @@ fun TextFields(isLong: Boolean, title: String) {
                 .fillMaxWidth()
                 .height(100.dp),
             value = cardDescription,
-            onValueChange = { cardDescription = it
+            onValueChange = {
+                cardDescription = it
                 mCardDescription = cardDescription
-                Log.d("DATA RECEIVE FROM COMPOSABLES: ",
-                    "mCardDescription is $mCardDescription")},
+                Log.d(
+                    "DATA RECEIVE FROM COMPOSABLES: ",
+                    "mCardDescription is $mCardDescription"
+                )
+            },
             singleLine = false,
-            label = { Text(text = title) } )
+            label = { Text(text = title) })
 
     } else {
         OutlinedTextField(
@@ -434,17 +500,21 @@ fun TextFields(isLong: Boolean, title: String) {
                 .fillMaxWidth(),
             value = cardTitle,
             onValueChange = {
-                if (it.length <= 20){
+                if (it.length <= 20) {
                     cardTitle = it
                     mCardName = cardTitle
-                    Log.d("DATA RECEIVE FROM COMPOSABLES: ",
-                        "mCardName is $mCardName")
+                    Log.d(
+                        "DATA RECEIVE FROM COMPOSABLES: ",
+                        "mCardName is $mCardName"
+                    )
                 }
             },
             singleLine = true,
             label = {
                 Text(text = title)
-            } ) } }
+            })
+    }
+}
 
 @Composable
 fun SourceDialog(
@@ -480,7 +550,10 @@ fun SourceDialog(
 
                     },
                     dialogShow = { closeDialog() }
-                ) } } ) }
+                )
+            }
+        })
+}
 
 @Composable
 fun PickedImage(bitmap: Bitmap) {
@@ -491,7 +564,8 @@ fun PickedImage(bitmap: Bitmap) {
         modifier = Modifier
             .fillMaxSize()
             .clip(RoundedCornerShape(10.dp)),
-    ) }
+    )
+}
 
 @Composable
 fun DefaultImage() {
@@ -506,7 +580,9 @@ fun DefaultImage() {
                     Dp.Hairline,
                     MaterialTheme.colors.onSurface
                 )
-            ) ) }
+            )
+    )
+}
 
 @Composable
 fun AcceptNewCardButton(saveCard: () -> Unit) {
@@ -526,7 +602,6 @@ fun AcceptNewCardButton(saveCard: () -> Unit) {
 }
 
 
-
 /** ======= PREVIEWS ======= */
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
@@ -534,7 +609,7 @@ fun AcceptNewCardButton(saveCard: () -> Unit) {
 @Composable
 fun FullPreview() {
     CastingPlacesTheme {
-        CardInfoPickerScreen(navController = rememberNavController(), cardTitle ="you" )
+        CardInfoPickerScreen(navController = rememberNavController(), cardTitle = "you")
     }
 }
 

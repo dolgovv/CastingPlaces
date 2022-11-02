@@ -3,7 +3,7 @@ package com.example.castingplaces
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Bundle
-import android.widget.Toast
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -34,6 +34,8 @@ import java.io.FileInputStream
 
 @Composable
 fun CardInfoScreen(id: Int, navController: NavController) {
+    var isItSaved: Boolean   by remember { mutableStateOf(true) }
+    var showDialog: Boolean  by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val db = SQLiteHelper(context)
     val allCardsList: MutableList<Card> = remember {
@@ -56,26 +58,59 @@ fun CardInfoScreen(id: Int, navController: NavController) {
                 title = { Text(text = id.toString()) },
                 navigationIcon = {
                     IconButton(onClick = {
-                        navController.popBackStack()
+                        if (isItSaved) {
+                            navController.popBackStack()
+                        } else {
+                            showDialog = true
+                        }
                     }) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = null)
                     }
                 }
             )
+            if (showDialog) {
+                AlertDialog(modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp)),
+                    onDismissRequest = { },
+                    title = {
+                        Text(text = "some data not saved yet")
+                    },
+                    buttons = {
 
+                        Row(
+                            modifier = Modifier.padding(all = 8.dp),
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+
+                            ButtonImageSourcePicker("Cancel",
+                                onClick = { },
+                                dialogShow = { }
+                            )
+
+                            ButtonImageSourcePicker("Save",
+                                onClick = { },
+                                dialogShow = { }
+                            )
+                        }
+                    })
+            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(10.dp)
-                ,
+                    .padding(10.dp),
                 verticalArrangement = Arrangement.Top,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                InfoMain(card = currentCard)
-            } } } }
+
+                InfoMain(card = currentCard, isSaved = { isItSaved = false })
+
+            }
+        }
+    }
+}
 
 @Composable
-fun InfoMain(card: Card) {
+fun InfoMain(card: Card, isSaved: () -> Unit) {
     val inputS = FileInputStream(card.getImage())
     val inData = ByteArray(inputS.available())
     inputS.read(inData)
@@ -94,7 +129,7 @@ fun InfoMain(card: Card) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CardInfoImage(bitmap)
-        TextInfo(card = card)
+        TextInfo(card = card, isSaved = { isSaved() })
     }
 }
 
@@ -135,21 +170,35 @@ fun OpenAndEditImage() {
         horizontalArrangement = Arrangement.End
 
     ) {
-        IconButton(onClick = { /*TODO*/ }) {
+        IconButton(onClick = {
+            /** TODO
+
+            вынести функционал сурс пикера и лаунчеров
+            за пределы cardinfopickerscreen и заюзать тут */
+        }) {
+
             Icon(Icons.Filled.Edit, contentDescription = "null")
         }
-        IconButton(onClick = { /*TODO*/ }) {
+        IconButton(onClick = { /*TODO картинка на полный экран */ }) {
             Icon(Icons.Filled.Info, contentDescription = "null")
         }
     }
 }
 
 @Composable
-fun TextInfo(card: Card) {
+fun TextInfo(card: Card, isSaved: () -> Unit) {
     val context = LocalContext.current
+    val dbHandler = SQLiteHelper(context)
+
+    var newName: String          by remember { mutableStateOf(card.getName()) }
+    var newDescription: String   by remember { mutableStateOf(card.getDescription()) }
+    var newDate: String          by remember { mutableStateOf(card.getDate()) }
+    var newLocation: String      by remember { mutableStateOf(card.getLocation()) }
+    var newImage: String         by remember { mutableStateOf(card.getImage()) }
 
     var isEditable by remember {
-        mutableStateOf(false) }
+        mutableStateOf(false)
+    }
 
     Column(
         modifier = Modifier
@@ -162,20 +211,25 @@ fun TextInfo(card: Card) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp),
-            value = card.getName(),
-            onValueChange = { /** TODO onValueChange */ it },
+            value = newName,
+            onValueChange = {
+                if (it != card.getName()) {
+                    isSaved()
+
+                    Log.d("PreventDialog", " $it = ${card.getName()}, and state is ")
+                }
+                newName = it
+            },
             enabled = isEditable,
             label = { Text(text = "Title") },
             trailingIcon = {
+
                 Row(
                     modifier = Modifier
                         .size(55.dp)
                         .clickable {
                             if (!isEditable) {
                                 /** TODO copyToBuffer() */
-                                Toast
-                                    .makeText(context, "TextField Clicked", Toast.LENGTH_SHORT)
-                                    .show()
                             }
                         },
                     verticalAlignment = Alignment.CenterVertically,
@@ -192,20 +246,23 @@ fun TextInfo(card: Card) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 10.dp),
-            value = card.getDescription(),
-            onValueChange = { it },
+            value = newDescription,
+            onValueChange = {
+                    if (it != card.getName()) {
+                        isSaved()
+                    }
+                newDescription = it
+            },
             enabled = isEditable,
             label = { Text(text = "Description") },
             trailingIcon = {
+
                 Row(
                     modifier = Modifier
                         .size(55.dp)
                         .clickable {
                             if (!isEditable) {
                                 /** TODO copyToBuffer() */
-                                Toast
-                                    .makeText(context, "TextField Clicked", Toast.LENGTH_SHORT)
-                                    .show()
                             }
                         },
                     verticalAlignment = Alignment.CenterVertically,
@@ -223,7 +280,7 @@ fun TextInfo(card: Card) {
                 .fillMaxWidth()
                 .padding(top = 10.dp)
                 .height(50.dp),
-            onClick = { },
+            onClick = { /** TODO вынести функционал дата пикера за пределы cardinfopickerscreen и заюзать тут */ },
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface),
             enabled = isEditable
@@ -237,7 +294,7 @@ fun TextInfo(card: Card) {
                 .fillMaxWidth()
                 .padding(top = 10.dp)
                 .height(50.dp),
-            onClick = { },
+            onClick = { /** TODO сделать, а затем вынести функционал локации за пределы cardinfopickerscreen и заюзать тут */ },
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface),
             enabled = isEditable
@@ -246,38 +303,57 @@ fun TextInfo(card: Card) {
             Text(text = card.getLocation())
         }
 
-        Column(modifier = Modifier
-            .fillMaxSize()
-            .padding(bottom = 10.dp)
-            .padding(end = 10.dp),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 10.dp)
+                .padding(end = 10.dp),
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.End
         ) {
 
             FloatingActionButton(
-                onClick = { isEditable = !isEditable
-                          if (isEditable){
-                              Toast.makeText(context, "isEditable = true", Toast.LENGTH_SHORT).show()
-                          }else{
-                              Toast.makeText(context, "isEditable = false", Toast.LENGTH_SHORT).show()
-                          }},
+                onClick = {
+                    isEditable = !isEditable
+                    if (isEditable) {
+
+                    } else {
+
+                        val updatedCard = Card(
+                            card.getId(),
+                            newName,
+                            newDescription,
+                            newDate,
+                            newLocation,
+                            newImage
+                        )
+
+                        dbHandler.updateCard(updatedCard)
+                    }
+                },
                 backgroundColor = MaterialTheme.colors.surface,
             ) {
-                if (isEditable){
+                if (isEditable) {
                     Icon(
                         Icons.Filled.Done,
                         contentDescription = null,
                         modifier = Modifier
                             .size(30.dp),
-                        contentColorFor(backgroundColor = MaterialTheme.colors.surface))
+                        contentColorFor(backgroundColor = MaterialTheme.colors.surface)
+                    )
                 } else {
                     Icon(
                         Icons.Filled.Edit,
                         contentDescription = null,
                         modifier = Modifier
                             .size(30.dp),
-                        contentColorFor(backgroundColor = MaterialTheme.colors.surface))
-                } } } } }
+                        contentColorFor(backgroundColor = MaterialTheme.colors.surface)
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Preview(showBackground = true)
 @Composable

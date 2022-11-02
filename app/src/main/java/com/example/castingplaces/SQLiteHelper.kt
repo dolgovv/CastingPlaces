@@ -1,6 +1,7 @@
 package com.example.castingplaces
 
 import android.R.id
+import android.content.ClipDescription
 import android.content.ContentValues
 import android.content.Context
 import android.database.Cursor
@@ -59,8 +60,10 @@ SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION)
     }
 
     /** NEED TO BE TESTED ?whereArgs? */
-    fun updateCard(card: Card): Int {
+    fun updateCard(card: Card) {
         val db = this.writableDatabase
+
+
         val whereArgs = arrayOf<String>(java.lang.String.valueOf(card.getId()))
 
         val values = ContentValues()
@@ -70,14 +73,16 @@ SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION)
         values.put(COLUMN_CARD_LOCATION, card.getLocation())
         values.put(COLUMN_CARD_IMAGE, card.getImage())
 
-        return db.update(TABLE_CARDS, values, COLUMN_ID + " =?", whereArgs)
+        db.update(TABLE_CARDS, values, COLUMN_ID + " =?", whereArgs)
+        db.close()
     }
+
 
     fun deleteCard(card: Card){
         val db = this.writableDatabase
         val whereArgs = arrayOf<String>(java.lang.String.valueOf(card.getId()))
 
-        db.delete(TABLE_CARDS, COLUMN_ID + " =?", whereArgs)
+        db.delete(TABLE_CARDS, COLUMN_ID + "_id=?", whereArgs)
         db.close()
     }
     /** === === NOT TO USE === === */
