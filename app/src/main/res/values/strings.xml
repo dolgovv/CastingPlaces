@@ -3,4 +3,5 @@
     <string name="title_activity_card_info">CardInfo</string>
     <string name="title_activity_main_screen">MainScreen</string>
     <string name="title_activity_card_details_screen">CardDetailsScreen</string>
+    <string name="title_activity_launchers_handler">LaunchersHandler</string>
 </resources>

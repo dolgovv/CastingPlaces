@@ -30,12 +30,13 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
+import java.io.File
 import java.io.FileInputStream
 
 @Composable
 fun CardInfoScreen(id: Int, navController: NavController) {
-    var isItSaved: Boolean   by remember { mutableStateOf(true) }
-    var showDialog: Boolean  by remember { mutableStateOf(false) }
+    var isItSaved: Boolean by remember { mutableStateOf(true) }
+    var showDialog: Boolean by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val db = SQLiteHelper(context)
     val allCardsList: MutableList<Card> = remember {
@@ -102,15 +103,18 @@ fun CardInfoScreen(id: Int, navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                InfoMain(card = currentCard, isSaved = { isItSaved = false })
-
+                InfoMain(
+                    card = currentCard,
+                    isSaved = { isItSaved = it },
+                    navController = navController
+                )
             }
         }
     }
 }
 
 @Composable
-fun InfoMain(card: Card, isSaved: () -> Unit) {
+fun InfoMain(card: Card, isSaved: (Boolean) -> Unit, navController: NavController) {
     val inputS = FileInputStream(card.getImage())
     val inData = ByteArray(inputS.available())
     inputS.read(inData)
@@ -121,7 +125,6 @@ fun InfoMain(card: Card, isSaved: () -> Unit) {
     )
     inputS.close()
 
-
     Column(
         modifier = Modifier
             .fillMaxSize(),
@@ -129,72 +132,20 @@ fun InfoMain(card: Card, isSaved: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         CardInfoImage(bitmap)
-        TextInfo(card = card, isSaved = { isSaved() })
+        TextInfo(card = card, isSaved = { isSaved(it) }, navController = navController)
     }
 }
 
 @Composable
-fun CardInfoImage(bitmap: Bitmap) {
-    Box(
-        modifier = Modifier
-            .height(250.dp)
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.BottomEnd
-    ) {
-        Image(
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(10.dp)),
-        )
-        OpenAndEditImage()
-    }
-}
-
-@Composable
-fun OpenAndEditImage() {
-    Row(
-        modifier = Modifier
-            .height(50.dp)
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    0F to Color.Transparent,
-                    0.9F to MaterialTheme.colors.background.copy(alpha = 1F)
-                )
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End
-
-    ) {
-        IconButton(onClick = {
-            /** TODO
-
-            вынести функционал сурс пикера и лаунчеров
-            за пределы cardinfopickerscreen и заюзать тут */
-        }) {
-
-            Icon(Icons.Filled.Edit, contentDescription = "null")
-        }
-        IconButton(onClick = { /*TODO картинка на полный экран */ }) {
-            Icon(Icons.Filled.Info, contentDescription = "null")
-        }
-    }
-}
-
-@Composable
-fun TextInfo(card: Card, isSaved: () -> Unit) {
+fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavController) {
     val context = LocalContext.current
     val dbHandler = SQLiteHelper(context)
 
-    var newName: String          by remember { mutableStateOf(card.getName()) }
-    var newDescription: String   by remember { mutableStateOf(card.getDescription()) }
-    var newDate: String          by remember { mutableStateOf(card.getDate()) }
-    var newLocation: String      by remember { mutableStateOf(card.getLocation()) }
-    var newImage: String         by remember { mutableStateOf(card.getImage()) }
+    var newName: String by remember { mutableStateOf(card.getName()) }
+    var newDescription: String by remember { mutableStateOf(card.getDescription()) }
+    var newDate: String by remember { mutableStateOf(card.getDate()) }
+    var newLocation: String by remember { mutableStateOf(card.getLocation()) }
+    var newImage: String by remember { mutableStateOf(card.getImage()) }
 
     var isEditable by remember {
         mutableStateOf(false)
@@ -214,7 +165,7 @@ fun TextInfo(card: Card, isSaved: () -> Unit) {
             value = newName,
             onValueChange = {
                 if (it != card.getName()) {
-                    isSaved()
+                    isSaved(false)
 
                     Log.d("PreventDialog", " $it = ${card.getName()}, and state is ")
                 }
@@ -248,9 +199,9 @@ fun TextInfo(card: Card, isSaved: () -> Unit) {
                 .padding(top = 10.dp),
             value = newDescription,
             onValueChange = {
-                    if (it != card.getName()) {
-                        isSaved()
-                    }
+                if (it != card.getName()) {
+                    isSaved(false)
+                }
                 newDescription = it
             },
             enabled = isEditable,
@@ -285,7 +236,6 @@ fun TextInfo(card: Card, isSaved: () -> Unit) {
             border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface),
             enabled = isEditable
         ) {
-
             Text(text = card.getDate())
         }
 
@@ -301,6 +251,21 @@ fun TextInfo(card: Card, isSaved: () -> Unit) {
         ) {
 
             Text(text = card.getLocation())
+        }
+
+        OutlinedButton(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp)
+                .height(50.dp),
+            onClick = {
+                dbHandler.deleteCard(card)
+                navController.popBackStack()
+            },
+            shape = RoundedCornerShape(10.dp),
+            border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface)
+        ) {
+            Text(text = "Delete")
         }
 
         Column(
@@ -327,7 +292,7 @@ fun TextInfo(card: Card, isSaved: () -> Unit) {
                             newLocation,
                             newImage
                         )
-
+                        isSaved(true)
                         dbHandler.updateCard(updatedCard)
                     }
                 },
@@ -355,10 +320,76 @@ fun TextInfo(card: Card, isSaved: () -> Unit) {
     }
 }
 
+@Composable
+fun CardInfoImage(bitmap: Bitmap) {
+    Box(
+        modifier = Modifier
+            .height(250.dp)
+            .fillMaxWidth()
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.BottomEnd
+    ) {
+        Image(
+            bitmap = bitmap.asImageBitmap(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(10.dp)),
+        )
+        OpenAndEditImage()
+    }
+}
+
+@Composable
+fun OpenAndEditImage() {
+    val context = LocalContext.current
+    val sourceDialogShow by remember {
+        mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
+            .height(50.dp)
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    0F to Color.Transparent,
+                    0.9F to MaterialTheme.colors.background.copy(alpha = 1F)
+                )
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End
+
+    ) {
+        if (sourceDialogShow) {
+            SourceDialog(
+                closeDialog = { /*TODO*/ },
+                runStorageLauncher = {
+                                     
+                                     },
+                runCameraLauncher = {
+
+                    Log.d("asasd", "dsasd")}
+            )
+
+        }
+        IconButton(onClick = {
+            /** TODO
+
+            вынести функционал сурс пикера и лаунчеров
+            за пределы cardinfopickerscreen и заюзать тут */
+        }) {
+
+            Icon(Icons.Filled.Edit, contentDescription = "null")
+        }
+        IconButton(onClick = { /*TODO картинка на полный экран */ }) {
+            Icon(Icons.Filled.Info, contentDescription = "null")
+        }
+    }
+}
+
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    CastingPlacesTheme {
-        CardInfoScreen(3, rememberNavController())
-    }
+    CardInfoScreen(3, rememberNavController())
 }

@@ -51,7 +51,7 @@ var mCardImage = ""
 lateinit var testGlobalTempFile: File
 
 
-private fun compressImageFile(context: Context, file: File): Boolean {
+fun compressImageFile(context: Context, file: File): Boolean {
     var result = false
     val uwu = Uri.fromFile(file)                                        //ПОЛУЧИЛ УРИ
     val inputS = context.contentResolver.openInputStream(uwu)          //ОТКРЫЛ СВЯЗЬ С ФАЙЛОМ
@@ -184,6 +184,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                 }
 
                 if (dialogShowVal.value) {
+
                     SourceDialog(
                         closeDialog = { dialogShowVal.value = false },
                         runStorageLauncher = { storageLauncher.launch("image/*") },
@@ -520,7 +521,7 @@ fun TextFields(isLong: Boolean, title: String) {
 fun SourceDialog(
     closeDialog: () -> Unit,
     runStorageLauncher: () -> Unit,
-    runCameraLauncher: () -> Unit
+    runCameraLauncher: () -> Unit,
 ) {
     AlertDialog(modifier = Modifier
         .clip(RoundedCornerShape(10.dp)),

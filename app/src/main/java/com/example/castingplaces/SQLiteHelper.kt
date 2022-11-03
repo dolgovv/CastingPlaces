@@ -64,7 +64,7 @@ SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION)
         val db = this.writableDatabase
 
 
-        val whereArgs = arrayOf<String>(java.lang.String.valueOf(card.getId()))
+        val whereArgs = arrayOf<String>(card.getId().toString())
 
         val values = ContentValues()
         values.put(COLUMN_CARD_NAME, card.getName())
@@ -80,9 +80,9 @@ SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION)
 
     fun deleteCard(card: Card){
         val db = this.writableDatabase
-        val whereArgs = arrayOf<String>(java.lang.String.valueOf(card.getId()))
+        val whereArgs = arrayOf<String>(card.getId().toString())
 
-        db.delete(TABLE_CARDS, COLUMN_ID + "_id=?", whereArgs)
+        db.delete(TABLE_CARDS, "$COLUMN_ID =?", whereArgs)
         db.close()
     }
     /** === === NOT TO USE === === */
