@@ -50,7 +50,6 @@ var mCardImage = ""
 
 lateinit var testGlobalTempFile: File
 
-
 fun compressImageFile(context: Context, file: File): Boolean {
     var result = false
     val uwu = Uri.fromFile(file)                                        //ПОЛУЧИЛ УРИ

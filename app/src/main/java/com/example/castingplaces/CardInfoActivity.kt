@@ -2,10 +2,10 @@ package com.example.castingplaces
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.os.Bundle
+import android.net.Uri
 import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -24,25 +24,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.core.content.FileProvider
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
 import java.io.File
 import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.io.OutputStream
+
+var newCardImage: String = ""
 
 @Composable
 fun CardInfoScreen(id: Int, navController: NavController) {
     var isItSaved: Boolean by remember { mutableStateOf(true) }
     var showDialog: Boolean by remember { mutableStateOf(false) }
     val context = LocalContext.current
-    val db = SQLiteHelper(context)
-    val allCardsList: MutableList<Card> = remember {
-        db.getAllCards()
-    }
-    val currentCard: Card = allCardsList[id - 1]
+//    val db = SQLiteHelper(context)
+//    val allCardsList: MutableList<Card> = remember {
+//        db.getAllCards()
+//    }
+//    val currentCard: Card by remember { mutableStateOf<Card>(allCardsList[id - 1]) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -104,7 +107,8 @@ fun CardInfoScreen(id: Int, navController: NavController) {
             ) {
 
                 InfoMain(
-                    card = currentCard,
+                    // card = currentCard,
+                    id = id,
                     isSaved = { isItSaved = it },
                     navController = navController
                 )
@@ -114,41 +118,51 @@ fun CardInfoScreen(id: Int, navController: NavController) {
 }
 
 @Composable
-fun InfoMain(card: Card, isSaved: (Boolean) -> Unit, navController: NavController) {
-    val inputS = FileInputStream(card.getImage())
-    val inData = ByteArray(inputS.available())
-    inputS.read(inData)
-    val bitmap = BitmapFactory.decodeByteArray(
-        inData,
-        0,
-        inData.size
-    )
-    inputS.close()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize(),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        CardInfoImage(bitmap)
-        TextInfo(card = card, isSaved = { isSaved(it) }, navController = navController)
-    }
-}
-
-@Composable
-fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavController) {
+fun InfoMain(
+    /** экземпляр текущей карты. переменные для объявления новой. апдейт инфы о карте */
+    id: Int,
+    isSaved: (Boolean) -> Unit,
+    navController: NavController
+) {
     val context = LocalContext.current
+
     val dbHandler = SQLiteHelper(context)
+    val allCardsList: MutableList<Card> = remember { dbHandler.getAllCards() }
+    val currentCard: Card by remember { mutableStateOf<Card>(allCardsList[id - 1]) }
 
-    var newName: String by remember { mutableStateOf(card.getName()) }
-    var newDescription: String by remember { mutableStateOf(card.getDescription()) }
-    var newDate: String by remember { mutableStateOf(card.getDate()) }
-    var newLocation: String by remember { mutableStateOf(card.getLocation()) }
-    var newImage: String by remember { mutableStateOf(card.getImage()) }
+    var newName: String by remember { mutableStateOf(currentCard.getName()) }
+    var newDescription: String by remember { mutableStateOf(currentCard.getDescription()) }
+    var newDate: String by remember { mutableStateOf(currentCard.getDate()) }
+    var newLocation: String by remember { mutableStateOf(currentCard.getLocation()) }
+    var newImage: String by remember { mutableStateOf(currentCard.getImage()) }
 
-    var isEditable by remember {
-        mutableStateOf(false)
+    var isEditable by remember { mutableStateOf(false) }
+    var isItSaved by remember { mutableStateOf(true) }
+
+    var bitmap by remember {
+        mutableStateOf<Bitmap?>(null)
+    }
+    /** сохранено - ссылка из card.getImage()
+     * не сохранено - ссылка из updatedImage мб глоабльной переменной
+     * ссылка - стримы(
+     * */
+
+    if (isItSaved) {
+        val inputS = FileInputStream(currentCard.getImage())
+        val inData = ByteArray(inputS.available())
+        inputS.read(inData)
+        bitmap = BitmapFactory.decodeByteArray(inData, 0, inData.size)
+        inputS.close()
+        Log.d("updated bitmap", "yok")
+    } else {
+        val inputS = FileInputStream(newCardImage)
+        val inData = ByteArray(inputS.available())
+        inputS.read(inData)
+        bitmap = BitmapFactory.decodeByteArray(
+            inData, 0, inData.size
+        )
+
+        Log.d("updated bitmap", "evet")
     }
 
     Column(
@@ -157,6 +171,14 @@ fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavControlle
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        bitmap?.let {
+            CardInfoImage(
+                bitmap = it,
+                card = currentCard,
+                isEditable = isEditable,
+                isSaved = { isItSaved = false }
+            )
+        }
 
         OutlinedTextField(
             modifier = Modifier
@@ -164,10 +186,10 @@ fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavControlle
                 .padding(top = 10.dp),
             value = newName,
             onValueChange = {
-                if (it != card.getName()) {
+                if (it != currentCard.getName()) {
                     isSaved(false)
 
-                    Log.d("PreventDialog", " $it = ${card.getName()}, and state is ")
+                    Log.d("PreventDialog", " $it = ${currentCard.getName()}, and state is ")
                 }
                 newName = it
             },
@@ -199,7 +221,7 @@ fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavControlle
                 .padding(top = 10.dp),
             value = newDescription,
             onValueChange = {
-                if (it != card.getName()) {
+                if (it != currentCard.getName()) {
                     isSaved(false)
                 }
                 newDescription = it
@@ -236,7 +258,7 @@ fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavControlle
             border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface),
             enabled = isEditable
         ) {
-            Text(text = card.getDate())
+            Text(text = currentCard.getDate())
         }
 
         OutlinedButton(
@@ -248,10 +270,7 @@ fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavControlle
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface),
             enabled = isEditable
-        ) {
-
-            Text(text = card.getLocation())
-        }
+        ) { Text(text = currentCard.getLocation()) }
 
         OutlinedButton(
             modifier = Modifier
@@ -259,7 +278,7 @@ fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavControlle
                 .padding(top = 10.dp)
                 .height(50.dp),
             onClick = {
-                dbHandler.deleteCard(card)
+                dbHandler.deleteCard(currentCard)
                 navController.popBackStack()
             },
             shape = RoundedCornerShape(10.dp),
@@ -276,16 +295,12 @@ fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavControlle
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.End
         ) {
-
             FloatingActionButton(
                 onClick = {
                     isEditable = !isEditable
-                    if (isEditable) {
-
-                    } else {
-
+                    if (!isEditable) {
                         val updatedCard = Card(
-                            card.getId(),
+                            currentCard.getId(),
                             newName,
                             newDescription,
                             newDate,
@@ -321,7 +336,8 @@ fun TextInfo(card: Card, isSaved: (Boolean) -> Unit, navController: NavControlle
 }
 
 @Composable
-fun CardInfoImage(bitmap: Bitmap) {
+fun CardInfoImage(bitmap: Bitmap, card: Card, isEditable: Boolean, isSaved: (Boolean) -> Unit) {
+
     Box(
         modifier = Modifier
             .height(250.dp)
@@ -337,59 +353,131 @@ fun CardInfoImage(bitmap: Bitmap) {
                 .fillMaxSize()
                 .clip(RoundedCornerShape(10.dp)),
         )
-        OpenAndEditImage()
+
+        Row(
+            modifier = Modifier
+                .height(50.dp)
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        0F to Color.Transparent,
+                        0.9F to MaterialTheme.colors.background.copy(alpha = 1F)
+                    )
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End
+
+        ) {
+            if (isEditable) { // дает возможность редактирования только когда isSaved state = false
+                OpenAndEditImage(card = card, isImageSaved = { isSaved(it) })
+            }
+        }
     }
 }
 
 @Composable
-fun OpenAndEditImage() {
+fun OpenAndEditImage(card: Card, isImageSaved: (Boolean) -> Unit) {
     val context = LocalContext.current
-    val sourceDialogShow by remember {
-        mutableStateOf(false) }
+    val db = SQLiteHelper(context)
+    var sourceDialogShow by remember { mutableStateOf(false) }
+    var imageUri by remember { mutableStateOf<Uri?>(null) }
+    var hasImage by remember { mutableStateOf(false) }
+    val directory = File(context.filesDir, "images")
+    if (!directory.exists()) {
+        directory.mkdirs()
+    }
 
-    Row(
-        modifier = Modifier
-            .height(50.dp)
-            .fillMaxWidth()
-            .background(
-                Brush.verticalGradient(
-                    0F to Color.Transparent,
-                    0.9F to MaterialTheme.colors.background.copy(alpha = 1F)
-                )
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End
+    val storageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri ->
+        imageUri = uri
+        hasImage = true
+        val inputS = context.contentResolver.openInputStream(uri) //GET STREAM FROM FILE
+        inputS?.let {
 
-    ) {
-        if (sourceDialogShow) {
-            SourceDialog(
-                closeDialog = { /*TODO*/ },
-                runStorageLauncher = {
-                                     
-                                     },
-                runCameraLauncher = {
+            val byteArray = ByteArray(it.available())
+            it.read(byteArray)                                  //GET DATA FROM STREAM TO AN ARRAY
+            /** NOW THE DATA FROM THE CHOSEN FILE SHOULD BE WRITTEN AT THE $byteArray */
 
-                    Log.d("asasd", "dsasd")}
+            /** NOW THE DATA FROM THE CHOSEN FILE SHOULD BE WRITTEN AT THE $byteArray */
+
+            val tempFile: File = File.createTempFile(
+                "temp_file_selected_picture",
+                ".jpg",
+                directory
             )
+            val outS: OutputStream = FileOutputStream(tempFile) //OPEN STREAM TO THE TEMPFILE
+            outS.write(byteArray)
+            /** NOW THE DATA FROM THE $byteArray SHOULD BE WRITTEN AT THE $tempFile */
+            /** NOW THE DATA FROM THE $byteArray SHOULD BE WRITTEN AT THE $tempFile */
+            outS.flush()
+            outS.close()
+            inputS.close()
 
-        }
-        IconButton(onClick = {
-            /** TODO
+            compressImageFile(context, tempFile)
+            newCardImage = tempFile.toString()
+            val updatedCard = Card(
+                card.getId(), card.getName(), card.getDescription(),
+                card.getDate(), card.getLocation(), tempFile.toString() )
+            db.updateCard(updatedCard)
+            isImageSaved(false)
+            Log.d("DATA RECEIVE FROM COMPOSABLES: ", "TEMP FILE IS $tempFile")
 
-            вынести функционал сурс пикера и лаунчеров
-            за пределы cardinfopickerscreen и заюзать тут */
-        }) {
-
-            Icon(Icons.Filled.Edit, contentDescription = "null")
-        }
-        IconButton(onClick = { /*TODO картинка на полный экран */ }) {
-            Icon(Icons.Filled.Info, contentDescription = "null")
         }
     }
-}
 
-@Preview(showBackground = true)
-@Composable
-fun DefaultPreview() {
-    CardInfoScreen(3, rememberNavController())
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture(),
+        onResult = { cameraLauncherResult: Boolean ->
+            hasImage = cameraLauncherResult
+            if (hasImage) {
+                compressImageFile(context, testGlobalTempFile)
+
+            }
+        })
+
+
+    if (sourceDialogShow) {
+        SourceDialog(
+            closeDialog = { sourceDialogShow = false },
+            runStorageLauncher = { storageLauncher.launch("image/*") },
+            runCameraLauncher = {
+                val tempFile: File = File.createTempFile(
+                    "temp_file_selected_picture",
+                    ".jpg", directory
+                )
+
+                val newPhotoContentUri = FileProvider.getUriForFile(
+                    context,
+                    BuildConfig.APPLICATION_ID + ".fileprovider",
+                    tempFile
+                )
+
+                imageUri = newPhotoContentUri
+
+                newCardImage = tempFile.toString()
+
+                testGlobalTempFile = tempFile
+                Log.d(
+                    "DATA RECEIVE FROM COMPOSABLES: ",
+                    "newPhotoContentUri is $newPhotoContentUri"
+                )
+                cameraLauncher.launch(newPhotoContentUri)
+            }
+        )
+    }
+
+    IconButton(onClick = {
+        sourceDialogShow = true
+        /** TODO
+
+        вынести функционал сурс пикера и лаунчеров
+        за пределы cardinfopickerscreen и заюзать тут */
+    }) {
+
+        Icon(Icons.Filled.Edit, contentDescription = "null")
+    }
+    IconButton(onClick = { /*TODO картинка на полный экран */ }) {
+        Icon(Icons.Filled.Info, contentDescription = "null")
+    }
 }
