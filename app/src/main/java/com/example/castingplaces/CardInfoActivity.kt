@@ -1,5 +1,6 @@
 package com.example.castingplaces
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -26,6 +27,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
@@ -40,12 +42,6 @@ var newCardImage: String = ""
 fun CardInfoScreen(id: Int, navController: NavController) {
     var isItSaved: Boolean by remember { mutableStateOf(true) }
     var showDialog: Boolean by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-//    val db = SQLiteHelper(context)
-//    val allCardsList: MutableList<Card> = remember {
-//        db.getAllCards()
-//    }
-//    val currentCard: Card by remember { mutableStateOf<Card>(allCardsList[id - 1]) }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -72,32 +68,7 @@ fun CardInfoScreen(id: Int, navController: NavController) {
                     }
                 }
             )
-            if (showDialog) {
-                AlertDialog(modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp)),
-                    onDismissRequest = { },
-                    title = {
-                        Text(text = "some data not saved yet")
-                    },
-                    buttons = {
 
-                        Row(
-                            modifier = Modifier.padding(all = 8.dp),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-
-                            ButtonImageSourcePicker("Cancel",
-                                onClick = { },
-                                dialogShow = { }
-                            )
-
-                            ButtonImageSourcePicker("Save",
-                                onClick = { },
-                                dialogShow = { }
-                            )
-                        }
-                    })
-            }
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -106,11 +77,12 @@ fun CardInfoScreen(id: Int, navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
+                if (showDialog){ PreventDialog(closeDialog = { showDialog = false }) }
+
                 InfoMain(
-                    // card = currentCard,
                     id = id,
                     isSaved = { isItSaved = it },
-                    navController = navController
+                    navController = navController,
                 )
             }
         }
@@ -122,7 +94,7 @@ fun InfoMain(
     /** экземпляр текущей карты. переменные для объявления новой. апдейт инфы о карте */
     id: Int,
     isSaved: (Boolean) -> Unit,
-    navController: NavController
+    navController: NavController,
 ) {
     val context = LocalContext.current
 
@@ -137,17 +109,15 @@ fun InfoMain(
     var newImage: String by remember { mutableStateOf(currentCard.getImage()) }
 
     var isEditable by remember { mutableStateOf(false) }
-    var isItSaved by remember { mutableStateOf(true) }
+    var isImageChanged by remember { mutableStateOf(false) }
 
-    var bitmap by remember {
-        mutableStateOf<Bitmap?>(null)
-    }
+    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     /** сохранено - ссылка из card.getImage()
      * не сохранено - ссылка из updatedImage мб глоабльной переменной
      * ссылка - стримы(
      * */
 
-    if (isItSaved) {
+    if (!isImageChanged) {
         val inputS = FileInputStream(currentCard.getImage())
         val inData = ByteArray(inputS.available())
         inputS.read(inData)
@@ -171,13 +141,16 @@ fun InfoMain(
         verticalArrangement = Arrangement.Top,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+
+        if (isImageChanged) {
+            isSaved(false)
+        }
         bitmap?.let {
             CardInfoImage(
                 bitmap = it,
                 card = currentCard,
                 isEditable = isEditable,
-                isSaved = { isItSaved = false }
-            )
+                isImageChanged = { isImageChanged = it })
         }
 
         OutlinedTextField(
@@ -299,16 +272,17 @@ fun InfoMain(
                 onClick = {
                     isEditable = !isEditable
                     if (!isEditable) {
-                        val updatedCard = Card(
-                            currentCard.getId(),
-                            newName,
-                            newDescription,
-                            newDate,
-                            newLocation,
-                            newImage
+                        saveCard(
+                            context = context,
+                            card = currentCard,
+                            newName = newName,
+                            newDescription = newDescription,
+                            newDate = newDate,
+                            newLocation = newLocation,
+                            newImage = newImage
                         )
+
                         isSaved(true)
-                        dbHandler.updateCard(updatedCard)
                     }
                 },
                 backgroundColor = MaterialTheme.colors.surface,
@@ -336,7 +310,12 @@ fun InfoMain(
 }
 
 @Composable
-fun CardInfoImage(bitmap: Bitmap, card: Card, isEditable: Boolean, isSaved: (Boolean) -> Unit) {
+fun CardInfoImage(
+    bitmap: Bitmap,
+    card: Card,
+    isEditable: Boolean,
+    isImageChanged: (Boolean) -> Unit
+) {
 
     Box(
         modifier = Modifier
@@ -369,14 +348,14 @@ fun CardInfoImage(bitmap: Bitmap, card: Card, isEditable: Boolean, isSaved: (Boo
 
         ) {
             if (isEditable) { // дает возможность редактирования только когда isSaved state = false
-                OpenAndEditImage(card = card, isImageSaved = { isSaved(it) })
+                OpenAndEditImage(card = card, isImageChanged = { isImageChanged(it) })
             }
         }
     }
 }
 
 @Composable
-fun OpenAndEditImage(card: Card, isImageSaved: (Boolean) -> Unit) {
+fun OpenAndEditImage(card: Card, isImageChanged: (Boolean) -> Unit) {
     val context = LocalContext.current
     val db = SQLiteHelper(context)
     var sourceDialogShow by remember { mutableStateOf(false) }
@@ -399,8 +378,6 @@ fun OpenAndEditImage(card: Card, isImageSaved: (Boolean) -> Unit) {
             it.read(byteArray)                                  //GET DATA FROM STREAM TO AN ARRAY
             /** NOW THE DATA FROM THE CHOSEN FILE SHOULD BE WRITTEN AT THE $byteArray */
 
-            /** NOW THE DATA FROM THE CHOSEN FILE SHOULD BE WRITTEN AT THE $byteArray */
-
             val tempFile: File = File.createTempFile(
                 "temp_file_selected_picture",
                 ".jpg",
@@ -409,18 +386,17 @@ fun OpenAndEditImage(card: Card, isImageSaved: (Boolean) -> Unit) {
             val outS: OutputStream = FileOutputStream(tempFile) //OPEN STREAM TO THE TEMPFILE
             outS.write(byteArray)
             /** NOW THE DATA FROM THE $byteArray SHOULD BE WRITTEN AT THE $tempFile */
-            /** NOW THE DATA FROM THE $byteArray SHOULD BE WRITTEN AT THE $tempFile */
             outS.flush()
             outS.close()
             inputS.close()
 
-            compressImageFile(context, tempFile)
+            testCompressImageFile(context, tempFile, 300000)
             newCardImage = tempFile.toString()
-            val updatedCard = Card(
-                card.getId(), card.getName(), card.getDescription(),
-                card.getDate(), card.getLocation(), tempFile.toString() )
-            db.updateCard(updatedCard)
-            isImageSaved(false)
+//            val updatedCard = Card(
+//                card.getId(), card.getName(), card.getDescription(),
+//                card.getDate(), card.getLocation(), tempFile.toString() )
+//            db.updateCard(updatedCard)
+            isImageChanged(true)
             Log.d("DATA RECEIVE FROM COMPOSABLES: ", "TEMP FILE IS $tempFile")
 
         }
@@ -480,4 +456,50 @@ fun OpenAndEditImage(card: Card, isImageSaved: (Boolean) -> Unit) {
     IconButton(onClick = { /*TODO картинка на полный экран */ }) {
         Icon(Icons.Filled.Info, contentDescription = "null")
     }
+}
+
+@Composable
+fun PreventDialog(closeDialog: () -> Unit,
+                  //saveCardFromDialog: () -> Unit
+){
+
+    AlertDialog(modifier = Modifier
+        .clip(RoundedCornerShape(10.dp)),
+        onDismissRequest = { closeDialog() },
+        title = {
+            Text(text = "some data not saved yet")
+        },
+        buttons = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                TextButton(onClick = { closeDialog() }) {
+                    Text(text = "Cancel", fontSize = 20.sp)
+                }
+            }
+        })
+}
+
+fun saveCard(
+    context: Context, card: Card, newName: String, newDescription: String, newDate: String,
+    newLocation: String, newImage: String
+) {
+
+    val dbHandler = SQLiteHelper(context)
+
+    val updatedCard = Card(
+        card.getId(),
+        newName,
+        newDescription,
+        newDate,
+        newLocation,
+        newImage
+    )
+
+    dbHandler.updateCard(updatedCard)
 }

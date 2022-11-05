@@ -67,7 +67,7 @@ fun compressImageFile(context: Context, file: File): Boolean {
         val outputS: OutputStream = FileOutputStream(file)           //открыл связь с файлом записи
 
         val compressedBitmap: Boolean =
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 50, outputS)//сжал битмапу
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, outputS)//сжал битмапу
         result = compressedBitmap
         outputS.flush()
         outputS.close()
@@ -77,6 +77,54 @@ fun compressImageFile(context: Context, file: File): Boolean {
 
     return result
 }
+
+fun testCompressImageFile(context: Context, file: File, sizeWanted: Int): Boolean {
+
+    var result = false
+    val uwu = Uri.fromFile(file)                                        //ПОЛУЧИЛ УРИ
+    val inputS = context.contentResolver.openInputStream(uwu)          //ОТКРЫЛ СВЯЗЬ С ФАЙЛОМ
+    var calc: Int = 100
+    var shouldItBeCompressed = true
+
+    if (inputS != null) {
+        val inData = ByteArray(inputS.available())                //создал массив с нужным размером
+        inputS.read(inData)                                       //записал картинку в массив
+        Log.d("DATA RECEIVE FROM COMPOSABLES: ", "inData.size is : ${inData.size}")
+
+        if (inData.size > sizeWanted){
+            val ccalc = sizeWanted.toDouble() / inData.size.toDouble() * 10
+            Log.d("DATA RECEIVE FROM COMPOSABLES: ", "ccalc is: $ccalc and ${ccalc}")
+
+            calc = if (ccalc < 10){
+                10
+            } else {
+                ccalc.toInt()
+            }
+        } else { shouldItBeCompressed = false }
+        Log.d("DATA RECEIVE FROM COMPOSABLES: ", "calc is: $calc")
+
+        val bitmap = BitmapFactory.decodeByteArray(
+            inData,
+            0,
+            inData.size
+        )                                                //сделал битмапу из массива
+        inputS.close()
+        if (shouldItBeCompressed){
+            val outputS: OutputStream = FileOutputStream(file)           //открыл связь с файлом записи
+            val compressedBitmap: Boolean =
+                bitmap.compress(Bitmap.CompressFormat.JPEG, calc, outputS)//сжал битмапу
+            result = compressedBitmap
+            outputS.flush()
+            outputS.close()
+        }
+
+    } else {
+        Log.d("DATA RECEIVE FROM COMPOSABLES: ", "inputS is kinda null: $inputS")
+    }
+
+    return result
+}
+
 
 @Composable
 fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
@@ -116,7 +164,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
             outS.close()
             inputS.close()
 
-            compressImageFile(context, tempFile)
+            testCompressImageFile(context, tempFile, 300000)
             mCardImage = tempFile.toString()
             Log.d("DATA RECEIVE FROM COMPOSABLES: ", "TEMP FILE IS $tempFile")
         }
@@ -127,7 +175,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
         onResult = { cameraLauncherResult: Boolean ->
             hasImage = cameraLauncherResult
             if (hasImage) {
-                compressImageFile(context, testGlobalTempFile)
+                testCompressImageFile(context, testGlobalTempFile, 300000)
             }
         })
 
