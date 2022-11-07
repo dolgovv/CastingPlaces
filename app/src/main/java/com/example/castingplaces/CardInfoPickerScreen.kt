@@ -95,8 +95,8 @@ fun testCompressImageFile(context: Context, file: File, sizeWanted: Int): Boolea
             val ccalc = sizeWanted.toDouble() / inData.size.toDouble() * 10
             Log.d("DATA RECEIVE FROM COMPOSABLES: ", "ccalc is: $ccalc and ${ccalc}")
 
-            calc = if (ccalc < 10){
-                10
+            calc = if (ccalc < 1){
+                1
             } else {
                 ccalc.toInt()
             }
@@ -153,18 +153,33 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
             /** NOW THE DATA FROM THE CHOSEN FILE SHOULD BE WRITTEN AT THE $byteArray */
 
             val tempFile: File = File.createTempFile(
-                "temp_file_selected_picture",
+                "selected_picture" + Calendar.getInstance().timeInMillis,
                 ".jpg",
                 directory
             )
+
+//            val thumbnailFile: File = File.createTempFile(
+//                "thumbnail",
+//                ".jpg",
+//                directory )
+
             val outS: OutputStream = FileOutputStream(tempFile) //OPEN STREAM TO THE TEMPFILE
             outS.write(byteArray)
+
+//            val outSthumbnail: OutputStream = FileOutputStream(thumbnailFile) //OPEN STREAM TO THE TEMPFILE
+//            outSthumbnail.write(byteArray)
             /** NOW THE DATA FROM THE $byteArray SHOULD BE WRITTEN AT THE $tempFile */
             outS.flush()
             outS.close()
+
+//            outSthumbnail.flush()
+//            outSthumbnail.close()
+
             inputS.close()
 
             testCompressImageFile(context, tempFile, 300000)
+
+            //testCompressImageFile(context, thumbnailFile, 30000)
             mCardImage = tempFile.toString()
             Log.d("DATA RECEIVE FROM COMPOSABLES: ", "TEMP FILE IS $tempFile")
         }
@@ -175,6 +190,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
         onResult = { cameraLauncherResult: Boolean ->
             hasImage = cameraLauncherResult
             if (hasImage) {
+                mCardImage = testGlobalTempFile.toString()
                 testCompressImageFile(context, testGlobalTempFile, 300000)
             }
         })
@@ -419,9 +435,7 @@ fun DatePickerButton() {
     val currentMonth = calendar.get(Calendar.MONTH)
     val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
 
-    val pickedDate = remember {
-        mutableStateOf("PICK YOUR DATE")
-    }
+    val pickedDate = mutableStateOf("PICK YOUR DATE")
     var buttonText by pickedDate
 
     val dpd = DatePickerDialog(

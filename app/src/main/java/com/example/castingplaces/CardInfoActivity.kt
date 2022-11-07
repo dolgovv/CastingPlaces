@@ -1,5 +1,6 @@
 package com.example.castingplaces
 
+import android.app.DatePickerDialog
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -28,6 +30,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
@@ -35,6 +39,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.OutputStream
+import java.util.*
 
 var newCardImage: String = ""
 
@@ -55,7 +60,7 @@ fun CardInfoScreen(id: Int, navController: NavController) {
 
         ) {
             TopAppBar(
-                title = { Text(text = id.toString()) },
+                title = { Text(text = "Edit your card") },
                 navigationIcon = {
                     IconButton(onClick = {
                         if (isItSaved) {
@@ -77,7 +82,9 @@ fun CardInfoScreen(id: Int, navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                if (showDialog){ PreventDialog(closeDialog = { showDialog = false }) }
+                if (showDialog) {
+                    PreventDialog(closeDialog = { showDialog = false })
+                }
 
                 InfoMain(
                     id = id,
@@ -100,7 +107,7 @@ fun InfoMain(
 
     val dbHandler = SQLiteHelper(context)
     val allCardsList: MutableList<Card> = remember { dbHandler.getAllCards() }
-    val currentCard: Card by remember { mutableStateOf<Card>(allCardsList[id - 1]) }
+    var currentCard: Card by remember { mutableStateOf<Card>(allCardsList[id - 1]) }
 
     var newName: String by remember { mutableStateOf(currentCard.getName()) }
     var newDescription: String by remember { mutableStateOf(currentCard.getDescription()) }
@@ -109,12 +116,12 @@ fun InfoMain(
     var newImage: String by remember { mutableStateOf(currentCard.getImage()) }
 
     var isEditable by remember { mutableStateOf(false) }
-    var isImageChanged by remember { mutableStateOf(false) }
+    var isImageChanged by remember { mutableStateOf(false) } //отвечает за предпросмотр картинки
 
     var bitmap by remember { mutableStateOf<Bitmap?>(null) }
     /** сохранено - ссылка из card.getImage()
      * не сохранено - ссылка из updatedImage мб глоабльной переменной
-     * ссылка - стримы(
+     * ссылка - стримы
      * */
 
     if (!isImageChanged) {
@@ -131,8 +138,8 @@ fun InfoMain(
         bitmap = BitmapFactory.decodeByteArray(
             inData, 0, inData.size
         )
-
-        Log.d("updated bitmap", "evet")
+        inputS.close()
+        newImage = newCardImage
     }
 
     Column(
@@ -142,16 +149,15 @@ fun InfoMain(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
 
-        if (isImageChanged) {
-            isSaved(false)
-        }
-        bitmap?.let {
-            CardInfoImage(
-                bitmap = it,
-                card = currentCard,
-                isEditable = isEditable,
-                isImageChanged = { isImageChanged = it })
-        }
+        if (bitmap != null) {
+            bitmap?.let {
+                CardInfoImage(
+                    bitmap = it,
+                    card = currentCard,
+                    isEditable = isEditable,
+                    isImageChanged = { isImageChanged = it })
+            }
+        } else { DefaultImage() }
 
         OutlinedTextField(
             modifier = Modifier
@@ -164,10 +170,13 @@ fun InfoMain(
 
                     Log.d("PreventDialog", " $it = ${currentCard.getName()}, and state is ")
                 }
-                newName = it
+                if (it.length <= 20) {
+                    newName = it
+                }
             },
             enabled = isEditable,
             label = { Text(text = "Title") },
+            singleLine = true,
             trailingIcon = {
 
                 Row(
@@ -221,18 +230,11 @@ fun InfoMain(
                 }
             })
 
-        OutlinedButton(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp)
-                .height(50.dp),
-            onClick = { /** TODO вынести функционал дата пикера за пределы cardinfopickerscreen и заюзать тут */ },
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface),
-            enabled = isEditable
-        ) {
-            Text(text = currentCard.getDate())
-        }
+        DatePickerInfoButton(
+            isSaved = { isSaved(it) },
+            isEditable = isEditable,
+            newDate = {newDate = it},
+            currentDate = newDate )
 
         OutlinedButton(
             modifier = Modifier
@@ -255,9 +257,10 @@ fun InfoMain(
                 navController.popBackStack()
             },
             shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface)
+            border = BorderStroke(Dp.Hairline, color = Color.Red)
         ) {
-            Text(text = "Delete")
+            Text(text = "Delete",
+            color = Color.Red)
         }
 
         Column(
@@ -273,17 +276,16 @@ fun InfoMain(
                     isEditable = !isEditable
                     if (!isEditable) {
                         saveCard(
-                            context = context,
-                            card = currentCard,
-                            newName = newName,
+                            context =        context,
+                            card =           currentCard,
+                            newName =        newName,
                             newDescription = newDescription,
-                            newDate = newDate,
-                            newLocation = newLocation,
-                            newImage = newImage
-                        )
+                            newDate =        newDate,
+                            newLocation =    newLocation,
+                            newImage =       newImage )
 
-                        isSaved(true)
-                    }
+                            isSaved(true)
+                   }
                 },
                 backgroundColor = MaterialTheme.colors.surface,
             ) {
@@ -309,6 +311,7 @@ fun InfoMain(
     }
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun CardInfoImage(
     bitmap: Bitmap,
@@ -316,6 +319,9 @@ fun CardInfoImage(
     isEditable: Boolean,
     isImageChanged: (Boolean) -> Unit
 ) {
+    var showFullImage by remember {
+        mutableStateOf(false)
+    }
 
     Box(
         modifier = Modifier
@@ -324,6 +330,26 @@ fun CardInfoImage(
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.BottomEnd
     ) {
+
+        if (showFullImage) {
+            Dialog(
+                onDismissRequest = { showFullImage = false },
+                properties = DialogProperties(usePlatformDefaultWidth = false)
+            ) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "kek",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { showFullImage = false }
+                        .padding(10.dp)
+                        .padding(vertical = 60.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                )
+            }
+        }
+
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = null,
@@ -332,7 +358,6 @@ fun CardInfoImage(
                 .fillMaxSize()
                 .clip(RoundedCornerShape(10.dp)),
         )
-
         Row(
             modifier = Modifier
                 .height(50.dp)
@@ -349,6 +374,13 @@ fun CardInfoImage(
         ) {
             if (isEditable) { // дает возможность редактирования только когда isSaved state = false
                 OpenAndEditImage(card = card, isImageChanged = { isImageChanged(it) })
+            } else {
+                IconButton(onClick = {
+                    showFullImage = true
+
+                }) {
+                    Icon(Icons.Filled.Info, contentDescription = "null")
+                }
             }
         }
     }
@@ -366,7 +398,7 @@ fun OpenAndEditImage(card: Card, isImageChanged: (Boolean) -> Unit) {
         directory.mkdirs()
     }
 
-    val storageLauncher = rememberLauncherForActivityResult(
+    val storageInfoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri ->
         imageUri = uri
@@ -402,13 +434,13 @@ fun OpenAndEditImage(card: Card, isImageChanged: (Boolean) -> Unit) {
         }
     }
 
-    val cameraLauncher = rememberLauncherForActivityResult(
+    val cameraInfoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { cameraLauncherResult: Boolean ->
             hasImage = cameraLauncherResult
             if (hasImage) {
                 compressImageFile(context, testGlobalTempFile)
-
+                isImageChanged(true)
             }
         })
 
@@ -416,29 +448,29 @@ fun OpenAndEditImage(card: Card, isImageChanged: (Boolean) -> Unit) {
     if (sourceDialogShow) {
         SourceDialog(
             closeDialog = { sourceDialogShow = false },
-            runStorageLauncher = { storageLauncher.launch("image/*") },
+            runStorageLauncher = { storageInfoLauncher.launch("image/*") },
             runCameraLauncher = {
                 val tempFile: File = File.createTempFile(
                     "temp_file_selected_picture",
-                    ".jpg", directory
-                )
+                    ".jpg", directory )
 
                 val newPhotoContentUri = FileProvider.getUriForFile(
                     context,
                     BuildConfig.APPLICATION_ID + ".fileprovider",
-                    tempFile
-                )
+                    tempFile )
 
                 imageUri = newPhotoContentUri
 
+                testCompressImageFile(context, tempFile, 300000)
                 newCardImage = tempFile.toString()
 
                 testGlobalTempFile = tempFile
+                //isImageChanged(true)
                 Log.d(
                     "DATA RECEIVE FROM COMPOSABLES: ",
                     "newPhotoContentUri is $newPhotoContentUri"
                 )
-                cameraLauncher.launch(newPhotoContentUri)
+                cameraInfoLauncher.launch(newPhotoContentUri)
             }
         )
     }
@@ -453,16 +485,13 @@ fun OpenAndEditImage(card: Card, isImageChanged: (Boolean) -> Unit) {
 
         Icon(Icons.Filled.Edit, contentDescription = "null")
     }
-    IconButton(onClick = { /*TODO картинка на полный экран */ }) {
-        Icon(Icons.Filled.Info, contentDescription = "null")
-    }
 }
 
 @Composable
-fun PreventDialog(closeDialog: () -> Unit,
-                  //saveCardFromDialog: () -> Unit
-){
-
+fun PreventDialog(
+    closeDialog: () -> Unit,
+    //saveCardFromDialog: () -> Unit
+) {
     AlertDialog(modifier = Modifier
         .clip(RoundedCornerShape(10.dp)),
         onDismissRequest = { closeDialog() },
@@ -484,6 +513,59 @@ fun PreventDialog(closeDialog: () -> Unit,
             }
         })
 }
+
+@Composable
+fun DatePickerInfoButton(
+    currentDate: String,
+    isSaved: (Boolean) -> Unit,
+    isEditable: Boolean,
+    newDate: (String) -> Unit
+) {
+
+    val context = LocalContext.current
+
+    val calendar = Calendar.getInstance()
+    val currentYear = calendar.get(Calendar.YEAR)
+    val currentMonth = calendar.get(Calendar.MONTH)
+    val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
+
+    val pickedDate = remember { mutableStateOf(currentDate) }
+    var buttonText: String = pickedDate.value
+
+    val dpd = DatePickerDialog(
+        context,
+        DatePickerDialog.OnDateSetListener { _, slctdyear, slctdmonth, slctddayOfMonth ->
+
+            buttonText = "$slctddayOfMonth/${slctdmonth + 1}/$slctdyear"
+            pickedDate.value = "$slctddayOfMonth/${slctdmonth + 1}/$slctdyear"
+            Log.d(
+                "datepicker problem: ",
+                "pickedDate = ${pickedDate.value}, ${currentDate}")
+        },
+        currentYear,
+        currentMonth,
+        currentDay
+    )
+    if (currentDate != pickedDate.value){
+        isSaved(false)
+    newDate(buttonText) }
+
+    OutlinedButton(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp)
+            .height(50.dp),
+        onClick = {
+            dpd.show()
+        },
+        shape = RoundedCornerShape(10.dp),
+        enabled = isEditable,
+        border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface)
+    ) {
+        Text(text = buttonText)
+    }
+}
+
 
 fun saveCard(
     context: Context, card: Card, newName: String, newDescription: String, newDate: String,
