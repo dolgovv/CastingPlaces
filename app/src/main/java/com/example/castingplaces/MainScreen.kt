@@ -20,6 +20,7 @@ import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -46,10 +47,6 @@ import java.io.OutputStream
 @Composable
 fun HomeScreen(navController: NavController) {
     val context = LocalContext.current
-    val db = SQLiteHelper(context)
-    val allCardsList: MutableList<Card> = remember {
-        db.getAllCards()
-    }
 
     Surface(
         modifier = Modifier
@@ -64,7 +61,7 @@ fun HomeScreen(navController: NavController) {
 
         ) {
             Toolbar(title = "Casting Places")
-            CardList(navController, allCardsList)
+            CardList(navController)
         }
 
         Column(
@@ -81,69 +78,11 @@ fun HomeScreen(navController: NavController) {
 }
 
 @Composable
-fun MainCard(id: Int, title: String, subtitle: String, imageUri: String, navController: NavController) {
+fun MainCard(card: Card,
+             //id: Int,
+             title: String, subtitle: String, imageUri: String, navController: NavController) {
     val context = LocalContext.current
-    val qooqoo: Bitmap? = BitmapFactory.decodeFile(imageUri)
-    //TODO мб тут превращать стрингу в путь
-//    imageUri.let {
-//        val source = ImageDecoder.createSource(context.contentResolver, imageUri)
-//        bitmap.value = ImageDecoder.decodeBitmap(source)
-//
-//    }
-    //val outS#
-
-    /** LAGAET */
-//    Card(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .height(150.dp)
-//            .padding(horizontal = 20.dp)
-//            .padding(top = 10.dp)
-//            .clickable {
-//                navController.navigate(route = Screens.CardDetailsScreen.route)
-//            },
-//        shape = MaterialTheme.shapes.medium,
-//        elevation = 5.dp,
-//
-//        ) {
-//        Row(
-//            modifier = Modifier
-//                .fillMaxSize(0.2f)
-//                .padding(10.dp),
-//        horizontalArrangement = Arrangement.Start,
-//        verticalAlignment = Alignment.CenterVertically)
-//        {
-//            Column(
-//                modifier = Modifier
-//                    .fillMaxHeight()
-//                    .width(120.dp)
-//
-//
-//            ) {
-//                if (qooqoo != null) {
-//                    Image(
-//                        contentDescription = null,
-//                        contentScale = ContentScale.Crop,
-//                        bitmap = qooqoo.asImageBitmap(),
-//                        modifier = Modifier
-//                            .clip(RoundedCornerShape(10.dp)),
-//                    )
-//                } else
-//                    DefaultCardImage()
-//            }
-//            DefaultCardImage()
-////            Column(
-////                modifier = Modifier
-////                    .fillMaxSize()
-////            ) {
-////
-////            }
-//
-//        }
-//
-//    }
-//}
-
+    val bitmap: Bitmap? = BitmapFactory.decodeFile(imageUri)
 
 /** LAGAET */
 
@@ -154,10 +93,7 @@ fun MainCard(id: Int, title: String, subtitle: String, imageUri: String, navCont
             .padding(horizontal = 20.dp)
             .padding(top = 10.dp)
             .clickable {
-                navController.navigate(Screens.CardInfoActivity.route + "/$id")
-                Toast
-                    .makeText(context, "$id", Toast.LENGTH_SHORT)
-                    .show()
+                navController.navigate(Screens.CardInfoActivity.route + "/${card.getId()}")
             },
         shape = MaterialTheme.shapes.medium,
         elevation = 5.dp,
@@ -180,12 +116,12 @@ fun MainCard(id: Int, title: String, subtitle: String, imageUri: String, navCont
                 horizontalAlignment = Alignment.Start
 
             ) {
-                if (qooqoo != null) {
+                if (bitmap != null) {
 
                     Image(
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        bitmap = qooqoo.asImageBitmap(),
+                        bitmap = bitmap.asImageBitmap(),
                         modifier = Modifier
                             .fillMaxSize()
                             .clip(RoundedCornerShape(10.dp)),
@@ -216,17 +152,22 @@ fun MainCard(id: Int, title: String, subtitle: String, imageUri: String, navCont
 
 @Composable
 fun CardList(
-    navController: NavController,
-    list: MutableList<Card>
+    navController: NavController
 ) {
+    val context = LocalContext.current
+    val db = SQLiteHelper(context)
+    val allCardsList: MutableList<Card> = remember { db.getAllCards() }
 
     LazyColumn() {
-        items(items = list) { list ->
+        items(items = allCardsList) { card ->
+            val item by remember {
+                mutableStateOf(card)
+            }
             MainCard(
-                id = list.getId(),
-                title = list.getName(),
-                subtitle = list.getDescription(),
-                imageUri = list.getImage(),
+                card = item,
+                title = item.getName(),
+                subtitle = item.getDescription(),
+                imageUri = item.getImage(),
                 navController = navController
             )
         }
@@ -259,20 +200,26 @@ fun Toolbar(title: String) {
 @Composable
 fun FloatButton(navController: NavController) {
     val mainContext = LocalContext.current
-    FloatingActionButton(
-        onClick = {
-            Toast.makeText(mainContext, "coming soon", Toast.LENGTH_SHORT).show()
-            navController.navigate(route = Screens.CardInfoPickerScreen.route)
-        },
-        backgroundColor = MaterialTheme.colors.surface,
-    ) {
-        Icon(
-            Icons.Filled.Add, contentDescription = null,
-            modifier = Modifier
-                .size(50.dp),
-            contentColorFor(backgroundColor = MaterialTheme.colors.surface)
-        )
-    }
+
+        FloatingActionButton(
+            onClick = {
+                Toast.makeText(mainContext, "coming soon", Toast.LENGTH_SHORT).show()
+                navController.navigate(route = Screens.CardInfoPickerScreen.route)
+            },
+            backgroundColor = MaterialTheme.colors.surface,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 15.dp,
+                pressedElevation = 25.dp
+            )
+        ) {
+            Icon(
+                Icons.Filled.Add, contentDescription = null,
+                modifier = Modifier
+                    .size(50.dp),
+                contentColorFor(backgroundColor = MaterialTheme.colors.surface)
+            )
+        }
+
 }
 
 
@@ -301,11 +248,7 @@ fun FloatButton(navController: NavController) {
 //@Preview(name = "light", uiMode = Configuration.UI_MODE_NIGHT_NO)
 //@Preview(name = "dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 //@Composable
-/**fun CardListPreview() {*/
-//    CastingPlacesTheme{
-//        CardList()
-//    }
-//}
+
 
 //@Preview(name = "light", uiMode = Configuration.UI_MODE_NIGHT_NO)
 //@Preview(name = "dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
@@ -317,17 +260,17 @@ fun FloatButton(navController: NavController) {
 //}
 
 
-@Preview(name = "light", uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
-@Preview(name = "dark", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
-@Composable
-fun MainPreview1() {
-    CastingPlacesTheme {
-        MainCard(
-            id = 0,
-            title = "Test",
-            subtitle = "testest",
-            imageUri = "/data/data/com.example.castingplaces/files/images/temp_file_selected_picture157354779621164714.jpg",
-            navController = rememberNavController()
-        )
-    }
-}
+//@Preview(name = "light", uiMode = Configuration.UI_MODE_NIGHT_NO, showBackground = true)
+//@Preview(name = "dark", uiMode = Configuration.UI_MODE_NIGHT_YES, showBackground = true)
+//@Composable
+//fun MainPreview1() {
+//    CastingPlacesTheme {
+//        MainCard(
+//            id = 0,
+//            title = "Test",
+//            subtitle = "testest",
+//            imageUri = "/data/data/com.example.castingplaces/files/images/temp_file_selected_picture157354779621164714.jpg",
+//            navController = rememberNavController()
+//        )
+//    }
+//}

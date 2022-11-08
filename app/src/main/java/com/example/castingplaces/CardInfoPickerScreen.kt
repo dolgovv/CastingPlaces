@@ -44,7 +44,7 @@ import java.util.*
 
 var mCardName = ""
 var mCardDescription = ""
-var mCardDate = "PICK YOUR DATE"
+var mCardDate = ""
 var mCardLocation = "1234567890"
 var mCardImage = ""
 
@@ -435,8 +435,9 @@ fun DatePickerButton() {
     val currentMonth = calendar.get(Calendar.MONTH)
     val currentDay = calendar.get(Calendar.DAY_OF_MONTH)
 
-    val pickedDate = mutableStateOf("PICK YOUR DATE")
+    val pickedDate = mutableStateOf("$currentDay/${currentMonth + 1}/$currentYear")
     var buttonText by pickedDate
+    mCardDate = "$currentDay/${currentMonth + 1}/$currentYear"
 
     val dpd = DatePickerDialog(
         context,
@@ -652,6 +653,10 @@ fun AcceptNewCardButton(saveCard: () -> Unit) {
     FloatingActionButton(
         onClick = { saveCard() },
         backgroundColor = MaterialTheme.colors.surface,
+        elevation = FloatingActionButtonDefaults.elevation(
+            defaultElevation = 15.dp,
+            pressedElevation = 25.dp
+        )
     ) {
         Icon(
             Icons.Filled.Done,

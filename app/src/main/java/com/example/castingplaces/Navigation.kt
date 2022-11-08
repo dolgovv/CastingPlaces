@@ -30,9 +30,5 @@ fun Navigation(navController: NavHostController) {
         composable(route = Screens.CardInfoPickerScreen.route) {
             CardInfoPickerScreen(navController = navController, "fromNavigation")
         }
-
-        composable(route = Screens.CardDetailsScreen.route) {
-            CardDetailsScreen(navController = navController, "fromNavigation")
-        }
     }
 }

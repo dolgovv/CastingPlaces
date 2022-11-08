@@ -1,11 +1,15 @@
 package com.example.castingplaces
 
+import android.R.attr.label
 import android.app.DatePickerDialog
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -32,14 +36,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.content.FileProvider
+import androidx.core.content.getSystemService
 import androidx.navigation.NavController
-import com.example.castingplaces.ui.theme.CastingPlacesTheme
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.OutputStream
 import java.util.*
+
 
 var newCardImage: String = ""
 
@@ -106,23 +112,19 @@ fun InfoMain(
     val context = LocalContext.current
 
     val dbHandler = SQLiteHelper(context)
-    val allCardsList: MutableList<Card> = remember { dbHandler.getAllCards() }
-    var currentCard: Card by remember { mutableStateOf<Card>(allCardsList[id - 1]) }
 
-    var newName: String by remember { mutableStateOf(currentCard.getName()) }
-    var newDescription: String by remember { mutableStateOf(currentCard.getDescription()) }
-    var newDate: String by remember { mutableStateOf(currentCard.getDate()) }
-    var newLocation: String by remember { mutableStateOf(currentCard.getLocation()) }
-    var newImage: String by remember { mutableStateOf(currentCard.getImage()) }
+    val currentCard       : Card by remember { mutableStateOf<Card>(dbHandler.getCard(id)) }
+    val cardID             : Int by remember { mutableStateOf(currentCard.getId()) }
+    var newName         : String by remember { mutableStateOf(currentCard.getName()) }
+    var newDescription  : String by remember { mutableStateOf(currentCard.getDescription()) }
+    var newDate         : String by remember { mutableStateOf(currentCard.getDate()) }
+    var newLocation     : String by remember { mutableStateOf(currentCard.getLocation()) }
+    var newImage        : String by remember { mutableStateOf(currentCard.getImage()) }
 
-    var isEditable by remember { mutableStateOf(false) }
-    var isImageChanged by remember { mutableStateOf(false) } //отвечает за предпросмотр картинки
+    var isEditable           by remember { mutableStateOf(false) }
+    var isImageChanged       by remember { mutableStateOf(false) } //отвечает за предпросмотр картинки
 
-    var bitmap by remember { mutableStateOf<Bitmap?>(null) }
-    /** сохранено - ссылка из card.getImage()
-     * не сохранено - ссылка из updatedImage мб глоабльной переменной
-     * ссылка - стримы
-     * */
+    var bitmap               by remember { mutableStateOf<Bitmap?>(null) }
 
     if (!isImageChanged) {
         val inputS = FileInputStream(currentCard.getImage())
@@ -170,9 +172,9 @@ fun InfoMain(
 
                     Log.d("PreventDialog", " $it = ${currentCard.getName()}, and state is ")
                 }
-                if (it.length <= 20) {
+                if (it.length <= 15) {
                     newName = it
-                }
+                } else { newName = it.dropLast(it.length - 15) }
             },
             enabled = isEditable,
             label = { Text(text = "Title") },
@@ -182,11 +184,7 @@ fun InfoMain(
                 Row(
                     modifier = Modifier
                         .size(55.dp)
-                        .clickable {
-                            if (!isEditable) {
-                                /** TODO copyToBuffer() */
-                            }
-                        },
+                        .clickable { copyToBuffer(context = context, text = newName) },
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
@@ -217,7 +215,7 @@ fun InfoMain(
                         .size(55.dp)
                         .clickable {
                             if (!isEditable) {
-                                /** TODO copyToBuffer() */
+                                copyToBuffer(context = context, text = newDescription)
                             }
                         },
                     verticalAlignment = Alignment.CenterVertically,
@@ -278,6 +276,7 @@ fun InfoMain(
                         saveCard(
                             context =        context,
                             card =           currentCard,
+                            id =             cardID,
                             newName =        newName,
                             newDescription = newDescription,
                             newDate =        newDate,
@@ -288,6 +287,10 @@ fun InfoMain(
                    }
                 },
                 backgroundColor = MaterialTheme.colors.surface,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 15.dp,
+                    pressedElevation = 25.dp
+                )
             ) {
                 if (isEditable) {
                     Icon(
@@ -309,6 +312,18 @@ fun InfoMain(
             }
         }
     }
+}
+
+fun copyToBuffer(context: Context, text: String) {
+   // val clip: ClipboardManager = Context.CLIPBOARD_SERVICE
+    val string = text.toString()
+
+    val clipboard = getSystemService(context, ClipboardManager::class.java)
+    var clip = ClipData.newPlainText(text, string)
+    clipboard!!.setPrimaryClip(clip)
+    Toast.makeText(context, "Text copied to your clipboard", Toast.LENGTH_SHORT).show()
+    Log.d("copy text", "${clipboard.primaryClip}")
+
 }
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -568,14 +583,14 @@ fun DatePickerInfoButton(
 
 
 fun saveCard(
-    context: Context, card: Card, newName: String, newDescription: String, newDate: String,
+    context: Context, card: Card,id: Int, newName: String, newDescription: String, newDate: String,
     newLocation: String, newImage: String
 ) {
 
     val dbHandler = SQLiteHelper(context)
 
     val updatedCard = Card(
-        card.getId(),
+        id,
         newName,
         newDescription,
         newDate,
