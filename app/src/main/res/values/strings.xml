@@ -4,4 +4,7 @@
     <string name="title_activity_main_screen">MainScreen</string>
     <string name="title_activity_card_details_screen">CardDetailsScreen</string>
     <string name="title_activity_launchers_handler">LaunchersHandler</string>
+    <string name="google_maps_api_key">AIzaSyC0s8rost8KdhugkmhvIcUpQAvY-CY-tFo</string>
+    <string name="places_api_key">AIzaSyA_fow1MV325bpGyodbE6WLu741YfU6dBQ</string>
+    <string name="casting_places_api_key">AIzaSyDTv3A-f3TnKvAIFOuE0EzxVeOaJmS51gc</string>
 </resources>

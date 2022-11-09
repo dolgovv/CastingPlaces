@@ -1,15 +1,20 @@
 package com.example.castingplaces
 
+import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.Bundle
 import android.util.Log
+import android.widget.Button
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -29,24 +34,85 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat.startActivity
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.widget.Autocomplete
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
+import com.google.maps.android.compose.*
 import java.io.*
 import java.util.*
+
+class CardInfoActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_map)
+
+        if (!Places.isInitialized()) {
+            Places.initialize(
+                this@CardInfoActivity,
+                resources.getString(R.string.casting_places_api_key)
+            )
+        }
+        try {
+            // These are the list of fields which we required is passed
+            val fields = listOf(
+                Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG,
+                Place.Field.ADDRESS
+            )
+            // Start the autocomplete intent with a unique request code.
+            val mapIntent = Autocomplete.IntentBuilder(
+                AutocompleteActivityMode.FULLSCREEN, fields
+            ).build(this@CardInfoActivity)
+            startActivityForResult(mapIntent, MapActivity.MAP_REQUEST_CODE)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+
+    public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK) {
+
+            if (requestCode == MapActivity.MAP_REQUEST_CODE) {
+
+                val place: Place = Autocomplete.getPlaceFromIntent(data!!)
+
+                mLocation     = place.address as String
+                mCardLocation.value = place.address as String
+                Log.d("map opener lol", "$mCardLocation.value")
+                finish()
+            }
+            // END
+        } else if (resultCode == Activity.RESULT_CANCELED) {
+            Log.e("map opener lol", "Cancelled")
+            finish()
+        }
+    }
+}
 
 
 var mCardName = ""
 var mCardDescription = ""
 var mCardDate = ""
-var mCardLocation = "1234567890"
+var mCardLocation = mutableStateOf<String>("Add a location")
 var mCardImage = ""
+
+var mLocation = ""
 
 lateinit var testGlobalTempFile: File
 
@@ -76,6 +142,58 @@ fun compressImageFile(context: Context, file: File): Boolean {
     }
 
     return result
+}
+
+fun saveTheCard(context: Context, navController: NavController) {
+
+    when {
+        mCardName == "" -> Toast.makeText(context, "Please, name your card", Toast.LENGTH_LONG)
+            .show()
+        mCardDescription == "" -> Toast.makeText(
+            context,
+            "Please, describe your card",
+            Toast.LENGTH_LONG
+        ).show()
+        mCardDate == "PICK YOUR DATE" -> Toast.makeText(
+            context,
+            "Please, add a date to your card",
+            Toast.LENGTH_LONG
+        )
+            .show()
+        mCardLocation.value == "" -> Toast.makeText(
+            context,
+            "Please, choose a location for your card",
+            Toast.LENGTH_LONG
+        )
+            .show()
+        mCardImage == "" -> Toast.makeText(
+            context,
+            "Please, select an image for your card",
+            Toast.LENGTH_LONG
+        )
+            .show()
+
+        else -> {
+            val createdCard = Card(
+                0,
+                mCardName,
+                mCardDescription,
+                mCardDate,
+                mCardLocation.value,
+                mCardImage
+            )
+            val dbHandler = SQLiteHelper(context)
+
+            val addPlace = dbHandler.addCard(createdCard)
+
+            if (addPlace > 0) {
+                Toast.makeText(context, "You created a ${createdCard.getName()} card",
+                    Toast.LENGTH_LONG)
+                    .show()
+                navController.navigate(route = Screens.MainScreen.route)
+            }
+        }
+    }
 }
 
 fun testCompressImageFile(context: Context, file: File, sizeWanted: Int): Boolean {
@@ -125,10 +243,11 @@ fun testCompressImageFile(context: Context, file: File, sizeWanted: Int): Boolea
     return result
 }
 
-
 @Composable
 fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
     val context = LocalContext.current
+
+    val mapIntent = Intent(context, MapActivity::class.java)
 
     var imageUri by remember { mutableStateOf<Uri?>(null) }
     val bitmap = remember { mutableStateOf<Bitmap?>(null) }
@@ -229,6 +348,7 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                 horizontalAlignment = Alignment.CenterHorizontally
 
             ) {
+
                 if (hasImage) {
 
                     if (imageUri != null) {
@@ -280,17 +400,18 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
                 TextFields(isLong = false, title = "Title")
                 TextFields(isLong = true, title = "Description")
                 DatePickerButton()
+
                 OutlinedButton(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
-                    onClick = {},
+                    onClick = {
+                        context.startActivity(mapIntent) },
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface)
                 ) {
 
-                    Text(text = "PICK A LOCATION")
-                }
+                    Text(text = mCardLocation.value) }
             }
 
             Column(
@@ -354,59 +475,6 @@ fun CardInfoPickerScreen(navController: NavController, cardTitle: String) {
         }
     }
 }
-
-fun saveTheCard(context: Context, navController: NavController) {
-
-    when {
-        mCardName == "" -> Toast.makeText(context, "Please, name your card", Toast.LENGTH_LONG)
-            .show()
-        mCardDescription == "" -> Toast.makeText(
-            context,
-            "Please, describe your card",
-            Toast.LENGTH_LONG
-        ).show()
-        mCardDate == "PICK YOUR DATE" -> Toast.makeText(
-            context,
-            "Please, add a date to your card",
-            Toast.LENGTH_LONG
-        )
-            .show()
-        mCardLocation == "" -> Toast.makeText(
-            context,
-            "Please, choose a location for your card",
-            Toast.LENGTH_LONG
-        )
-            .show()
-        mCardImage == "" -> Toast.makeText(
-            context,
-            "Please, select an image for your card",
-            Toast.LENGTH_LONG
-        )
-            .show()
-
-        else -> {
-            val createdCard = Card(
-                0,
-                mCardName,
-                mCardDescription,
-                mCardDate,
-                mCardLocation,
-                mCardImage
-            )
-            val dbHandler = SQLiteHelper(context)
-
-            val addPlace = dbHandler.addCard(createdCard)
-
-            if (addPlace > 0) {
-                Toast.makeText(context, "You created a ${createdCard.getName()} card",
-                    Toast.LENGTH_LONG)
-                    .show()
-                navController.navigate(route = Screens.MainScreen.route)
-            }
-        }
-    }
-}
-
 
 /** BUTTONS */
 
@@ -668,7 +736,7 @@ fun AcceptNewCardButton(saveCard: () -> Unit) {
     }
 }
 
-
+private const val MAP_REQUEST_CODE = 12
 /** ======= PREVIEWS ======= */
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)

@@ -1,9 +1,12 @@
 package com.example.castingplaces
 
+import android.app.Activity
 import android.content.Intent
 import android.content.res.Configuration
 import androidx.compose.foundation.lazy.items
 import android.os.Bundle
+import android.util.Log
+import android.widget.Button
 import android.widget.Toast
 import android.widget.Toolbar
 import androidx.activity.ComponentActivity
@@ -32,12 +35,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.castingplaces.ui.theme.CastingPlacesTheme
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.widget.Autocomplete
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 
 class MainActivity : ComponentActivity() {
+
+    companion object {
+        private const val MAP_REQUEST_CODE = 12
+        private var mLatitude: Double = 0.0 // A variable which will hold the latitude value.
+        private var mLongitude: Double = 0.0 // A variable which will hold the longitude value.
+    }
 
     lateinit var navController: NavHostController
 
@@ -53,3 +67,4 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+

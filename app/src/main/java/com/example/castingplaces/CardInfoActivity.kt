@@ -1,15 +1,19 @@
 package com.example.castingplaces
 
 import android.R.attr.label
+import android.app.Activity
 import android.app.DatePickerDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
+import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -40,12 +44,64 @@ import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.content.FileProvider
 import androidx.core.content.getSystemService
 import androidx.navigation.NavController
+import com.google.android.libraries.places.api.Places
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.widget.Autocomplete
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.OutputStream
 import java.util.*
 
+class CardInfoAct : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_map)
+
+        if (!Places.isInitialized()) {
+            Places.initialize(
+                this@CardInfoAct,
+                resources.getString(R.string.casting_places_api_key)
+            )
+        }
+        try {
+            // These are the list of fields which we required is passed
+            val fields = listOf(
+                Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG,
+                Place.Field.ADDRESS
+            )
+            // Start the autocomplete intent with a unique request code.
+            val mapIntent = Autocomplete.IntentBuilder(
+                AutocompleteActivityMode.FULLSCREEN, fields
+            ).build(this@CardInfoAct)
+            startActivityForResult(mapIntent, MapActivity.MAP_REQUEST_CODE)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+
+    public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode == Activity.RESULT_OK) {
+
+            if (requestCode == MapActivity.MAP_REQUEST_CODE) {
+
+                val place: Place = Autocomplete.getPlaceFromIntent(data!!)
+
+                mLocation     = place.address as String
+                mCardLocation.value = place.address as String
+                Log.d("map opener lol", "$mCardLocation.value")
+                finish()
+            }
+            // END
+        } else if (resultCode == Activity.RESULT_CANCELED) {
+            Log.e("map opener lol", "Cancelled")
+            finish()
+        }
+    }
+}
 
 var newCardImage: String = ""
 
@@ -110,10 +166,10 @@ fun InfoMain(
     navController: NavController,
 ) {
     val context = LocalContext.current
-
+    val mapIntent = Intent(context, MapActivity::class.java)
     val dbHandler = SQLiteHelper(context)
 
-    val currentCard       : Card by remember { mutableStateOf<Card>(dbHandler.getCard(id)) }
+    val currentCard       : Card by remember { mutableStateOf(dbHandler.getCard(id)) }
     val cardID             : Int by remember { mutableStateOf(currentCard.getId()) }
     var newName         : String by remember { mutableStateOf(currentCard.getName()) }
     var newDescription  : String by remember { mutableStateOf(currentCard.getDescription()) }
@@ -239,11 +295,19 @@ fun InfoMain(
                 .fillMaxWidth()
                 .padding(top = 10.dp)
                 .height(50.dp),
-            onClick = { /** TODO сделать, а затем вынести функционал локации за пределы cardinfopickerscreen и заюзать тут */ },
+            onClick = { /** TODO сделать, а затем вынести функционал локации за пределы cardinfopickerscreen и заюзать тут */
+                context.startActivity(mapIntent)
+                      },
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(Dp.Hairline, MaterialTheme.colors.onSurface),
             enabled = isEditable
-        ) { Text(text = currentCard.getLocation()) }
+        ) {
+            if(mCardLocation.value == currentCard.getLocation()){
+                Text(text = currentCard.getLocation())
+            } else {
+                Text(text = mCardLocation.value)
+            }
+        }
 
         OutlinedButton(
             modifier = Modifier
@@ -439,10 +503,6 @@ fun OpenAndEditImage(card: Card, isImageChanged: (Boolean) -> Unit) {
 
             testCompressImageFile(context, tempFile, 300000)
             newCardImage = tempFile.toString()
-//            val updatedCard = Card(
-//                card.getId(), card.getName(), card.getDescription(),
-//                card.getDate(), card.getLocation(), tempFile.toString() )
-//            db.updateCard(updatedCard)
             isImageChanged(true)
             Log.d("DATA RECEIVE FROM COMPOSABLES: ", "TEMP FILE IS $tempFile")
 
@@ -454,7 +514,7 @@ fun OpenAndEditImage(card: Card, isImageChanged: (Boolean) -> Unit) {
         onResult = { cameraLauncherResult: Boolean ->
             hasImage = cameraLauncherResult
             if (hasImage) {
-                compressImageFile(context, testGlobalTempFile)
+                testCompressImageFile(context, testGlobalTempFile, 300000)
                 isImageChanged(true)
             }
         })
